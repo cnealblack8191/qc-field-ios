@@ -1,0 +1,63 @@
+{
+  "width": 1800,
+  "height": 1200,
+  "sheets": [
+    {
+      "id": "sheet-e101",
+      "sheetNumber": "E-101",
+      "title": "Level 1 Power Plan",
+      "revision": "B",
+      "image": "e-101.png",
+      "rooms": [
+        { "name": "CLASSROOM 101", "x0": 0.05, "y0": 0.08, "x1": 0.25, "y1": 0.44 },
+        { "name": "CLASSROOM 102", "x0": 0.25, "y0": 0.08, "x1": 0.45, "y1": 0.44 },
+        { "name": "GYM 110", "x0": 0.45, "y0": 0.08, "x1": 0.78, "y1": 0.44 },
+        { "name": "CORRIDOR 104", "x0": 0.05, "y0": 0.44, "x1": 0.78, "y1": 0.54 },
+        { "name": "OFFICE 103", "x0": 0.05, "y0": 0.54, "x1": 0.20, "y1": 0.90 },
+        { "name": "TOILET 105", "x0": 0.20, "y0": 0.54, "x1": 0.32, "y1": 0.90 },
+        { "name": "MECH 106", "x0": 0.32, "y0": 0.54, "x1": 0.45, "y1": 0.90 },
+        { "name": "ELEC 107", "x0": 0.45, "y0": 0.54, "x1": 0.58, "y1": 0.90 },
+        { "name": "STORAGE 108", "x0": 0.58, "y0": 0.54, "x1": 0.78, "y1": 0.90 }
+      ],
+      "pins": [
+        { "x": 0.120, "y": 0.440, "device": "Receptacle box", "room": "Classroom 101", "description": "Duplex at 18\" AFF, corridor wall", "status": "PASS" },
+        { "x": 0.050, "y": 0.250, "device": "Data box", "room": "Classroom 101", "description": "Data box, exterior wall", "status": "PASS" },
+        { "x": 0.250, "y": 0.300, "device": "Switch box", "room": "Classroom 102", "description": "3-gang switch at 46\" AFF", "status": "PUNCH", "note": "Box set 4\" low. Reset to 46\" AFF before the wall is grouted." },
+        { "x": 0.360, "y": 0.080, "device": "Receptacle box", "room": "Classroom 102", "description": "Duplex at 18\" AFF, north wall", "status": "UNCHECKED" },
+        { "x": 0.450, "y": 0.200, "device": "Fire alarm device", "room": "Gym 110", "description": "Horn/strobe backbox at 80\" AFF", "status": "UNCHECKED" },
+        { "x": 0.600, "y": 0.080, "device": "Conduit stub", "room": "Gym 110", "description": "Stub-up for scoreboard feed", "status": "UNCHECKED" },
+        { "x": 0.780, "y": 0.260, "device": "Wall sleeve", "room": "Gym 110", "description": "4\" sleeve through CMU, east wall", "status": "UNCHECKED" },
+        { "x": 0.330, "y": 0.540, "device": "Receptacle box", "room": "Corridor 104", "description": "GFCI box at 18\" AFF", "status": "UNCHECKED" },
+        { "x": 0.520, "y": 0.540, "device": "Switch box", "room": "Elec 107", "description": "Single-gang switch at door", "status": "UNCHECKED" },
+        { "x": 0.580, "y": 0.720, "device": "Panel backbox", "room": "Elec 107", "description": "Recessed panel LP-1A can", "status": "UNCHECKED" },
+        { "x": 0.200, "y": 0.700, "device": "Switch box", "room": "Office 103", "description": "Occupancy sensor switch", "status": "UNCHECKED" },
+        { "x": 0.700, "y": 0.900, "device": "Receptacle box", "room": "Storage 108", "description": "Duplex at 18\" AFF, south wall", "status": "UNCHECKED" }
+      ]
+    },
+    {
+      "id": "sheet-e201",
+      "sheetNumber": "E-201",
+      "title": "Level 2 Power Plan",
+      "revision": "A",
+      "image": "e-201.png",
+      "rooms": [
+        { "name": "CLASSROOM 201", "x0": 0.05, "y0": 0.08, "x1": 0.28, "y1": 0.44 },
+        { "name": "CLASSROOM 202", "x0": 0.28, "y0": 0.08, "x1": 0.52, "y1": 0.44 },
+        { "name": "MEDIA 210", "x0": 0.52, "y0": 0.08, "x1": 0.78, "y1": 0.44 },
+        { "name": "CORRIDOR 204", "x0": 0.05, "y0": 0.44, "x1": 0.78, "y1": 0.54 },
+        { "name": "CLASSROOM 203", "x0": 0.05, "y0": 0.54, "x1": 0.30, "y1": 0.90 },
+        { "name": "IDF 205", "x0": 0.30, "y0": 0.54, "x1": 0.42, "y1": 0.90 },
+        { "name": "CLASSROOM 206", "x0": 0.42, "y0": 0.54, "x1": 0.78, "y1": 0.90 }
+      ],
+      "pins": [
+        { "x": 0.160, "y": 0.440, "device": "Receptacle box", "room": "Classroom 201", "description": "Duplex at 18\" AFF", "status": "UNCHECKED" },
+        { "x": 0.280, "y": 0.260, "device": "Data box", "room": "Classroom 202", "description": "Data box, demising wall", "status": "UNCHECKED" },
+        { "x": 0.650, "y": 0.080, "device": "Fixture box", "room": "Media 210", "description": "Wall sconce box at 90\" AFF", "status": "UNCHECKED" },
+        { "x": 0.520, "y": 0.330, "device": "Switch box", "room": "Media 210", "description": "Dimmer box at 46\" AFF", "status": "UNCHECKED" },
+        { "x": 0.300, "y": 0.700, "device": "Conduit stub", "room": "IDF 205", "description": "Sleeves for cable tray, 4 x 4\"", "status": "UNCHECKED" },
+        { "x": 0.100, "y": 0.540, "device": "Fire alarm device", "room": "Classroom 203", "description": "Pull station backbox", "status": "UNCHECKED" },
+        { "x": 0.600, "y": 0.900, "device": "Receptacle box", "room": "Classroom 206", "description": "Duplex at 18\" AFF, south wall", "status": "UNCHECKED" }
+      ]
+    }
+  ]
+}

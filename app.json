@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "ECI Field QC",
+    "slug": "eci-field-qc",
+    "scheme": "ecifieldqc",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#f5f6f8",
+    "ios": {
+      "bundleIdentifier": "us.ecinc.qcfield",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "requireFullScreen": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "ECI Field QC uses the camera to photograph deficiencies and inspection evidence.",
+        "NSPhotoLibraryUsageDescription": "ECI Field QC attaches photos you choose from your library to punch items and inspections.",
+        "NSPhotoLibraryAddUsageDescription": "ECI Field QC can save inspection photos to your library.",
+        "UIRequiresFullScreen": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "us.ecinc.qcfield",
+      "adaptiveIcon": {
+        "backgroundColor": "#15191d",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-image",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#15191d"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ECI Field QC attaches photos you choose from your library to punch items and inspections.",
+          "cameraPermission": "ECI Field QC uses the camera to photograph deficiencies and inspection evidence."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
