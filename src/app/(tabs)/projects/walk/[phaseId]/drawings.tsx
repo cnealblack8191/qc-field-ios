@@ -62,7 +62,7 @@ export default function DrawingsScreen() {
             <Card
               accessibilityLabel={`${sheet.sheetNumber} ${sheet.title}, ${progress.checked} of ${progress.total} checked`}
               key={sheet.id}
-              onPress={() => router.push({ pathname: "/projects/sheet/[sheetId]", params: { sheetId: sheet.id } })}
+              onPress={() => router.push({ pathname: "/sheet/[sheetId]", params: { sheetId: sheet.id } })}
             >
               <Row style={{ justifyContent: "space-between" }}>
                 <View style={{ flex: 1 }}>

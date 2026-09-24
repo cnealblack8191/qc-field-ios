@@ -18,15 +18,16 @@ export function newId() {
  */
 export const secureSession = {
   async get(key: string) {
-    if (Platform.OS === "web") return AsyncStorage.getItem(key);
+    // A browser with storage blocked simply starts signed out.
+    if (Platform.OS === "web") return AsyncStorage.getItem(key).catch(() => null);
     return SecureStore.getItemAsync(key);
   },
   async set(key: string, value: string) {
-    if (Platform.OS === "web") return AsyncStorage.setItem(key, value);
+    if (Platform.OS === "web") return AsyncStorage.setItem(key, value).catch(() => undefined);
     return SecureStore.setItemAsync(key, value, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY });
   },
   async remove(key: string) {
-    if (Platform.OS === "web") return AsyncStorage.removeItem(key);
+    if (Platform.OS === "web") return AsyncStorage.removeItem(key).catch(() => undefined);
     return SecureStore.deleteItemAsync(key);
   }
 };

@@ -33,11 +33,13 @@ function RootNavigator() {
   return (
     <ThemeProvider value={theme}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerTintColor: palette.accent, contentStyle: { backgroundColor: palette.bg } }}>
+      <Stack screenOptions={{ headerTintColor: palette.accent, headerTitleStyle: { color: palette.ink }, contentStyle: { backgroundColor: palette.bg } }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="item/[itemId]" options={{ title: "Punch item", headerBackTitle: "Back" }} />
+          {/* Above the tabs, so a sheet gets the whole screen. */}
+          <Stack.Screen name="sheet/[sheetId]" options={{ title: "", headerBackTitle: "Back" }} />
           <Stack.Screen name="log-item" options={{ presentation: "modal", title: "Log punch item" }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>

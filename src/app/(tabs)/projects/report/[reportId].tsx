@@ -45,6 +45,7 @@ export default function ReportScreen() {
   const editable = isReportEditable(report, view.user.id);
   const status = reportStatus[report.status];
   const openCount = progress.total - progress.answered;
+  const flagged = report.answers.filter((item) => item.status === "no");
 
   function answer(item: ChecklistAnswer, next: AnswerStatus, comments: string) {
     const result = enqueue({ kind: "report.answer", reportId: report!.id, answerId: item.id, status: next, comments });
@@ -179,6 +180,13 @@ export default function ReportScreen() {
           <Card>
             <Text style={[type.headline, { color: palette.ink }]}>Ready to send to the office?</Text>
             <Meta>{progress.answered}/{progress.total} checklist items · {report.photos.length} photos</Meta>
+            {flagged.length ? (
+              <Notice
+                icon="flag"
+                message={`${flagged.length} answered No: ${flagged.map((item) => `#${report.answers.indexOf(item) + 1}`).join(", ")}. Check each has a comment the office can act on.`}
+                tone="open"
+              />
+            ) : null}
             <Button icon="cloudUp" label="Send to office" large onPress={submit} />
           </Card>
         ) : null}

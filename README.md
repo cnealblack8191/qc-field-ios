@@ -58,8 +58,9 @@ Builds are made in the cloud with EAS (`eas.json`): `preview` for internal
 TestFlight-style installs, `production` for the App Store. Bundle id
 `us.ecinc.qcfield`. Needs an Apple Developer account for ECI.
 
-Over-the-air updates are **not enabled** yet — see the notes in the pull
-request / session summary before turning them on.
+Over-the-air updates are **not enabled** yet. The constraints, risks and a
+recommended setup are in `../docs/FIELD_IOS_DECISIONS.md`, with the other
+decisions and open questions.
 
 ## Checks
 

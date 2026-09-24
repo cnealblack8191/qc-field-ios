@@ -131,7 +131,7 @@ export default function PunchItemScreen() {
           <Button
             icon="drawing"
             label={`Show pin ${pin.number} on the drawing`}
-            onPress={() => router.push({ pathname: "/projects/sheet/[sheetId]", params: { sheetId: pin.sheetId, pin: pin.id } })}
+            onPress={() => router.push({ pathname: "/sheet/[sheetId]", params: { sheetId: pin.sheetId, pin: pin.id } })}
             variant="secondary"
           />
         ) : null}

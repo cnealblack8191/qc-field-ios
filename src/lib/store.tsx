@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Image } from "expo-image";
 import { AppState } from "react-native";
 import { ApiError, type FieldApi } from "./api/contract";
 import { demoServer } from "./api/demo";
@@ -113,6 +114,11 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const persistSnapshot = useCallback((next: FieldSnapshot) => {
+    const sheetUris = next.sheets.map((sheet) => sheet.imageUri).filter(Boolean);
+    const previous = new Set(snapshotRef.current?.sheets.map((sheet) => sheet.imageUri));
+    // Sheets must be on the device before the inspector walks into the
+    // basement, not when they first open one there.
+    if (sheetUris.some((uri) => !previous.has(uri))) void Image.prefetch(sheetUris, "disk").catch(() => undefined);
     snapshotRef.current = next;
     setSnapshot(next);
     void AsyncStorage.setItem(snapshotKey(next.user.id), JSON.stringify(next)).catch(() => undefined);

@@ -49,7 +49,8 @@ export default function SheetScreen() {
   const [note, setNote] = useState("");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState<{ text: string; undo: { pin: Pin } } | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selected = pins.find((pin) => pin.id === selectedId) ?? null;
   const progress = sheetProgress(view, sheetId);
@@ -109,9 +110,20 @@ export default function SheetScreen() {
       return;
     }
     status === "PUNCH" ? haptic.warning() : haptic.success();
-    setFlash(`Pin ${selected.number} · ${pinStatusLabel[status]}`);
-    setTimeout(() => setFlash(null), 1600);
+    // Auto-advance is fast, so the last result stays one tap from undone.
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlash({ text: `Pin ${selected.number} · ${pinStatusLabel[status]} — saved`, undo: { pin: selected } });
+    flashTimer.current = setTimeout(() => setFlash(null), 6000);
     select(nextUnchecked(selected));
+  }
+
+  function undo() {
+    if (!flash) return;
+    const previous = flash.undo.pin;
+    enqueue({ kind: "pin.inspect", pinId: previous.id, status: previous.status, note: previous.note, photoUris: [] });
+    haptic.tap();
+    setFlash(null);
+    select(pins.find((pin) => pin.id === previous.id) ?? null);
   }
 
   const panel = (
@@ -125,7 +137,13 @@ export default function SheetScreen() {
           !wide && { maxHeight: punching ? 460 : 280 }
         ]}
       >
-        {flash ? <Notice icon="checkCircle" message={`${flash} — saved`} tone="done" /> : null}
+        {flash ? (
+          <Row style={[styles.flash, { backgroundColor: palette.okSoft }]}>
+            <Icon color={palette.okInk} name="checkCircle" size={18} />
+            <Text accessibilityLiveRegion="polite" style={[type.subhead, { color: palette.okInk, flex: 1 }]}>{flash.text}</Text>
+            <Button label="Undo" onPress={undo} variant="plain" />
+          </Row>
+        ) : null}
         {problem ? <Notice icon="warning" message={problem} tone="danger" /> : null}
 
         {selected ? (
@@ -254,6 +272,7 @@ const styles = StyleSheet.create({
   choiceCurrent: { borderWidth: 3, borderColor: "#1e40af" },
   choiceLabel: { color: "#fff", fontSize: 19, fontWeight: "800" },
   choiceHint: { color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "600" },
+  flash: { borderRadius: 10, paddingLeft: 12, minHeight: size.tap },
   legend: { position: "absolute", left: 8, bottom: 8, flexDirection: "row", gap: 10, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, opacity: 0.92 },
   legendDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1 }
 });

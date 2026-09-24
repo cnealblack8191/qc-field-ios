@@ -21,7 +21,6 @@ export default function ProjectsStack() {
       <Stack.Screen name="[projectId]" options={{ title: "", headerLargeTitleEnabled: true }} />
       <Stack.Screen name="walk/[phaseId]/index" options={{ title: "", headerLargeTitleEnabled: true }} />
       <Stack.Screen name="walk/[phaseId]/drawings" options={{ title: "Drawings" }} />
-      <Stack.Screen name="sheet/[sheetId]" options={{ title: "" }} />
       <Stack.Screen name="report/[reportId]" options={{ title: "" }} />
     </Stack>
   );

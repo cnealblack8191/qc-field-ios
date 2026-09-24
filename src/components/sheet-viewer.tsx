@@ -221,6 +221,12 @@ const PinMarker = memo(function PinMarker({ pin, width, height, scale, isSelecte
         >
           <Text style={[styles.pinText, { color: colors.ink }]}>{pin.number}</Text>
         </View>
+        {/* A shape as well as a colour: legible in sunlight and without colour vision. */}
+        {pin.status !== "UNCHECKED" ? (
+          <View style={[styles.mark, { backgroundColor: colors.fill }]}>
+            <Text style={styles.markText}>{pin.status === "PASS" ? "✓" : pin.status === "PUNCH" ? "!" : "–"}</Text>
+          </View>
+        ) : null}
         {isQueued ? <View style={[styles.queued, { backgroundColor: palette.started }]} /> : null}
       </Pressable>
     </Animated.View>
@@ -241,5 +247,7 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   pinText: { fontSize: 13, fontWeight: "800" },
+  mark: { position: "absolute", left: 0, bottom: 0, width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#fff", alignItems: "center", justifyContent: "center" },
+  markText: { color: "#fff", fontSize: 11, fontWeight: "900", lineHeight: 13 },
   queued: { position: "absolute", right: 2, top: 2, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: "#fff" }
 });
