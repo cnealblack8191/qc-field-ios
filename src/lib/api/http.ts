@@ -5,15 +5,13 @@ import { ApiError, type FieldApi } from "./contract";
 /**
  * Client for the mobile API described in the QC repo's docs/FIELD_IOS_API.md.
  *
- * The server side of this contract does not exist yet: the web field app uses
- * cookie sessions and server actions, which a native app cannot call. Until
- * `/api/field/v1` ships, signing in against a real server reports that
- * plainly rather than failing in some stranger way.
+ * Served by the QC server under app/api/field/v1. A server that predates it
+ * answers the sign-in with 404, which is reported plainly.
  */
 export class HttpFieldApi implements FieldApi {
   readonly mode = "live" as const;
 
-  constructor(private readonly baseUrl: string) {}
+  constructor(private readonly baseUrl: string, private readonly device = "iPhone") {}
 
   private url(path: string) {
     return `${this.baseUrl.replace(/\/+$/, "")}/api/field/v1${path}`;
@@ -56,9 +54,9 @@ export class HttpFieldApi implements FieldApi {
     const response = await this.request("/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, device: "ios" })
+      body: JSON.stringify({ email, password, device: this.device })
     });
-    return (await response.json()) as { token: string; user: FieldUser };
+    return (await response.json()) as { token: string; user: FieldUser; expiresAt: string | null };
   }
 
   async signOut(token: string) {

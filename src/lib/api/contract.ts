@@ -8,7 +8,7 @@ import type { FieldSnapshot, FieldUser } from "../types";
  */
 export interface FieldApi {
   readonly mode: "demo" | "live";
-  signIn(email: string, password: string): Promise<{ token: string; user: FieldUser }>;
+  signIn(email: string, password: string): Promise<{ token: string; user: FieldUser; expiresAt: string | null }>;
   signOut(token: string): Promise<void>;
   /** Everything assigned to the signed-in inspector. */
   fetchSnapshot(token: string): Promise<FieldSnapshot>;

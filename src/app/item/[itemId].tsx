@@ -13,7 +13,7 @@ export default function PunchItemScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const palette = usePalette();
   const view = useView();
-  const { enqueue } = useField();
+  const { enqueue, imageSource } = useField();
   const item = view.items.find((candidate) => candidate.id === itemId);
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -122,7 +122,7 @@ export default function PunchItemScreen() {
         {item.photos.length ? (
           <View style={styles.photos}>
             {item.photos.map((photo) => (
-              <Image accessibilityLabel="Reported condition" contentFit="cover" key={photo.id} source={{ uri: photo.uri }} style={[styles.photo, { backgroundColor: palette.surfaceMuted }]} />
+              <Image accessibilityLabel="Reported condition" contentFit="cover" key={photo.id} source={imageSource(photo.uri)} style={[styles.photo, { backgroundColor: palette.surfaceMuted }]} />
             ))}
           </View>
         ) : null}

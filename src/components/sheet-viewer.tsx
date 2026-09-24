@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
 import { pinColors } from "@/lib/labels";
 import { pinStatusLabel } from "@/lib/ops";
+import { useField } from "@/lib/store";
 import { usePalette } from "@/lib/theme";
 import type { Pin, Sheet } from "@/lib/types";
 
@@ -33,6 +34,7 @@ export const SheetViewer = forwardRef<SheetViewerHandle, {
   onSelect: (pin: Pin) => void;
 }>(function SheetViewer({ sheet, pins, selectedId, queuedIds, onSelect }, ref) {
   const palette = usePalette();
+  const { imageSource } = useField();
   const [frame, setFrame] = useState({ width: 0, height: 0 });
 
   // Fit the sheet inside the frame.
@@ -153,7 +155,8 @@ export const SheetViewer = forwardRef<SheetViewerHandle, {
             <Image
               accessibilityIgnoresInvertColors
               contentFit="contain"
-              source={sheet.imageAsset ?? { uri: sheet.imageUri }}
+              source={sheet.imageAsset ?? imageSource(sheet.imageUri)}
+              cachePolicy="disk"
               style={StyleSheet.absoluteFill}
               transition={150}
             />

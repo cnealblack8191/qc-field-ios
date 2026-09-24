@@ -7,6 +7,7 @@ import { Button, Card, EmptyState, Meta, Notice, Pill, ProgressBar, Row, Section
 import { Segmented } from "@/components/segmented";
 import { haptic } from "@/lib/device";
 import { phaseStatus } from "@/lib/labels";
+import { uncheckedPins } from "@/lib/rules";
 import { isUnresolved, phaseCounts, sheetProgress } from "@/lib/select";
 import { useField, useView } from "@/lib/store";
 import { type, usePalette } from "@/lib/theme";
@@ -39,6 +40,7 @@ export default function WalkScreen() {
     .sort((a, b) => b.number - a.number);
 
   const sheets = view.sheets.filter((sheet) => sheet.phaseId === phase.id);
+  const remainingPins = uncheckedPins(view, phase.id);
   const pinTotals = sheets.reduce(
     (total, sheet) => {
       const progress = sheetProgress(view, sheet.id);
@@ -54,9 +56,7 @@ export default function WalkScreen() {
       haptic.success();
       setNotice("Walk marked complete. The office will review your items.");
     };
-    const message = pinTotals.total && pinTotals.checked < pinTotals.total
-      ? `${pinTotals.total - pinTotals.checked} pins are still unchecked. Mark the walk complete anyway?`
-      : "The office will review the items you logged.";
+    const message = "The office will review the items you logged.";
     if (Platform.OS === "web") return run();
     Alert.alert("Mark walk complete?", message, [
       { text: "Cancel", style: "cancel" },
@@ -132,7 +132,11 @@ export default function WalkScreen() {
 
       {!isClosed && phase.status !== "WALK_COMPLETE" && counts.total ? (
         <View style={styles.complete}>
-          <Button label="Mark walk complete" onPress={completeWalk} variant="secondary" />
+          {remainingPins ? (
+            <Meta>{remainingPins} pin{remainingPins === 1 ? " is" : "s are"} still unchecked on the drawings. Check every pin, then mark the walk complete.</Meta>
+          ) : (
+            <Button label="Mark walk complete" onPress={completeWalk} variant="secondary" />
+          )}
         </View>
       ) : null}
     </Screen>

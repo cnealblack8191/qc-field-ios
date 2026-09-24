@@ -49,8 +49,12 @@ the server de-duplicates by the op's client id.
 
 ## Signing in for real
 
-Needs the mobile API on the QC server — see `docs/FIELD_IOS_API.md` in the QC server repo (`cnealblack8191/qc`). Until it
-exists, *Sign in* reports that the server does not offer it yet; use the demo.
+Inspectors sign in with their normal QC email and password. The phone stays
+signed in for 45 days; after the first sign-in the app offers Face ID, which is
+asked when the app opens and after 15 minutes away. The office can sign a phone
+out from Settings → Signed-in phones. The server side is `docs/FIELD_IOS_API.md`
+in the QC repo (`cnealblack8191/qc`); until it is deployed, *Sign in* reports
+that the server does not offer it yet.
 
 ## Shipping to inspectors
 

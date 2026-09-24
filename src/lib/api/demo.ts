@@ -57,7 +57,7 @@ class DemoServer implements FieldApi {
 
   async signIn(email: string, _password: string) {
     await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
-    return { token: "demo-token", user: { ...DEMO_USER, email: email.trim() || DEMO_USER.email } };
+    return { token: "demo-token", user: { ...DEMO_USER, email: email.trim() || DEMO_USER.email }, expiresAt: null };
   }
 
   async signOut() {}

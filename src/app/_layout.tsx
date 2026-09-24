@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { LockScreen } from "@/components/lock-screen";
+import { LockProvider } from "@/lib/lock";
 import { FieldStoreProvider, useField } from "@/lib/store";
 import { usePalette } from "@/lib/theme";
 
@@ -46,6 +48,7 @@ function RootNavigator() {
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         </Stack.Protected>
       </Stack>
+      <LockScreen />
     </ThemeProvider>
   );
 }
@@ -55,7 +58,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <FieldStoreProvider>
-          <RootNavigator />
+          <LockProvider>
+            <RootNavigator />
+          </LockProvider>
         </FieldStoreProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

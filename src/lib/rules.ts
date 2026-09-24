@@ -24,6 +24,12 @@ export function isReportEditable(report: InspectionReport, userId: string) {
   return report.inspectorId === userId && (report.status === "READY" || report.status === "IN_PROGRESS");
 }
 
+/** The server will not complete a walk with pins left unchecked (completePhaseWalk). */
+export function uncheckedPins(snapshot: FieldSnapshot, phaseId: string) {
+  const sheetIds = new Set(snapshot.sheets.filter((sheet) => sheet.phaseId === phaseId).map((sheet) => sheet.id));
+  return snapshot.pins.filter((pin) => sheetIds.has(pin.sheetId) && pin.status === "UNCHECKED").length;
+}
+
 export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string): string | null {
   const phaseOf = (phaseId: string) => snapshot.phases.find((phase) => phase.id === phaseId);
   const itemOf = (itemId: string) => snapshot.items.find((item) => item.id === itemId);
@@ -57,6 +63,8 @@ export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string)
       const phase = phaseOf(op.phaseId);
       if (!phase) return "That walk is no longer assigned to you.";
       if (phase.status === "CLOSED") return "The office has closed this phase.";
+      const unchecked = uncheckedPins(snapshot, op.phaseId);
+      if (unchecked) return `${unchecked} pin${unchecked === 1 ? " is" : "s are"} still unchecked. Check every pin before marking the walk complete.`;
       return null;
     }
     case "pin.inspect": {

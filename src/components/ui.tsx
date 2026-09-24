@@ -13,6 +13,7 @@ import {
   type ViewStyle
 } from "react-native";
 import { haptic } from "@/lib/device";
+import { useField } from "@/lib/store";
 import { toneColors, type Tone } from "@/lib/labels";
 import { size, type, usePalette } from "@/lib/theme";
 import type { Photo } from "@/lib/types";
@@ -183,12 +184,13 @@ export function Notice({ tone, message, icon }: { tone: Tone; message: string; i
 
 export function PhotoStrip({ photos, onRemove }: { photos: Photo[]; onRemove?: (photo: Photo) => void }) {
   const palette = usePalette();
+  const { imageSource } = useField();
   if (!photos.length) return null;
   return (
     <View style={styles.photoStrip}>
       {photos.map((photo) => (
         <View key={photo.id} style={[styles.thumbWrap, { borderColor: palette.line }]}>
-          <Image accessibilityLabel={photo.caption || "Photo"} contentFit="cover" source={{ uri: photo.uri }} style={styles.thumb} />
+          <Image accessibilityLabel={photo.caption || "Photo"} contentFit="cover" source={imageSource(photo.uri)} style={styles.thumb} />
           {photo.isLocal ? (
             <View style={[styles.thumbBadge, { backgroundColor: palette.warningSoft }]}>
               <Icon color={palette.warning} name="cloudUp" size={12} />

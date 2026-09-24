@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Image } from "expo-image";
+import Constants from "expo-constants";
+import { Image, type ImageSource } from "expo-image";
 import { AppState } from "react-native";
 import { ApiError, type FieldApi } from "./api/contract";
 import { demoServer } from "./api/demo";
@@ -31,6 +32,8 @@ interface Session {
   serverUrl: string;
   token: string;
   user: FieldUser;
+  /** When the server stops honouring the token (45 days after sign-in). Null in the demo. */
+  expiresAt: string | null;
 }
 
 export interface QueuedOp {
@@ -62,6 +65,8 @@ interface FieldStore {
   dismiss(opId: string): void;
   setSimulateOffline(value: boolean): void;
   resetDemo(): Promise<void>;
+  /** A photo or sheet URI as an image source: server files carry the token. */
+  imageSource(uri: string): ImageSource;
 }
 
 type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;
@@ -73,7 +78,23 @@ const outboxKey = (userId: string) => `field.outbox.v1.${userId}`;
 const Context = createContext<FieldStore | null>(null);
 
 function apiFor(session: Pick<Session, "mode" | "serverUrl">): FieldApi {
-  return session.mode === "demo" ? demoServer : new HttpFieldApi(session.serverUrl);
+  return session.mode === "demo" ? demoServer : new HttpFieldApi(session.serverUrl, Constants.deviceName ?? "iPhone");
+}
+
+/** Server files are API paths that need the phone's token; local and bundled ones do not. */
+function sourceFor(session: Session | null, uri: string): ImageSource {
+  if (session?.mode === "live" && uri.startsWith("/api/")) {
+    return {
+      uri: `${session.serverUrl.replace(/\/+$/, "")}${uri}`,
+      headers: { Authorization: `Bearer ${session.token}` },
+      cacheKey: uri.split("?")[0]
+    };
+  }
+  return { uri };
+}
+
+function isExpired(session: Session | null) {
+  return Boolean(session?.expiresAt && new Date(session.expiresAt).getTime() <= Date.now());
 }
 
 function photosOf(op: FieldOp) {
@@ -118,7 +139,14 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
     const previous = new Set(snapshotRef.current?.sheets.map((sheet) => sheet.imageUri));
     // Sheets must be on the device before the inspector walks into the
     // basement, not when they first open one there.
-    if (sheetUris.some((uri) => !previous.has(uri))) void Image.prefetch(sheetUris, "disk").catch(() => undefined);
+    const current = sessionRef.current;
+    if (current?.mode === "live" && sheetUris.some((uri) => !previous.has(uri))) {
+      const base = current.serverUrl.replace(/\/+$/, "");
+      void Image.prefetch(
+        sheetUris.map((uri) => `${base}${uri}`),
+        { cachePolicy: "disk", headers: { Authorization: `Bearer ${current.token}` } }
+      ).catch(() => undefined);
+    }
     snapshotRef.current = next;
     setSnapshot(next);
     void AsyncStorage.setItem(snapshotKey(next.user.id), JSON.stringify(next)).catch(() => undefined);
@@ -138,6 +166,9 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
           ]);
           sessionRef.current = restored;
           setSession(restored);
+          // Past its 45 days the token is dead; the walk stays readable and
+          // the queue is kept until the inspector signs in again.
+          if (isExpired(restored)) setSyncState("auth");
           if (cached) {
             const parsed = JSON.parse(cached) as FieldSnapshot;
             snapshotRef.current = parsed;
@@ -178,6 +209,10 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
   const drain = useCallback(async () => {
     const current = sessionRef.current;
     if (!current || syncing.current) return;
+    if (isExpired(current)) {
+      setSyncState("auth");
+      return;
+    }
     if (!onlineRef.current) {
       setSyncState("offline");
       return;
@@ -285,8 +320,8 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
       const target = { mode, serverUrl: (serverUrl || DEFAULT_SERVER).trim() };
       const api = apiFor(target);
       if (mode === "demo") demoServer.offline = false;
-      const { token, user } = await api.signIn(email.trim(), password);
-      const next: Session = { ...target, token, user };
+      const { token, user, expiresAt } = await api.signIn(email.trim(), password);
+      const next: Session = { ...target, token, user, expiresAt };
       // Outbox and cache are per user, so a shared iPad never shows one
       // inspector's queued work to the next.
       const [cached, queued] = await Promise.all([
@@ -307,6 +342,7 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
       persistSnapshot(fresh);
       setLastSyncedAt(fresh.fetchedAt);
       setSession(next);
+      setSyncState("idle");
       setSimulateOfflineState(false);
     },
     [persistSnapshot]
@@ -347,6 +383,8 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
     await refresh().catch(() => undefined);
   }, [persistOutbox, refresh]);
 
+  const imageSource = useCallback((uri: string) => sourceFor(session, uri), [session]);
+
   const pendingCount = outbox.filter((entry) => !entry.rejected).length;
   const rejectedCount = outbox.length - pendingCount;
 
@@ -368,9 +406,10 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
       syncNow: drain,
       dismiss,
       setSimulateOffline,
-      resetDemo
+      resetDemo,
+      imageSource
     }),
-    [ready, session, view, outbox, pendingCount, rejectedCount, online, syncState, lastSyncedAt, simulateOffline, signIn, signOut, enqueue, drain, dismiss, setSimulateOffline, resetDemo]
+    [ready, session, view, outbox, pendingCount, rejectedCount, online, syncState, lastSyncedAt, simulateOffline, signIn, signOut, enqueue, drain, dismiss, setSimulateOffline, resetDemo, imageSource]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
