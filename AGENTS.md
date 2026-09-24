@@ -1,8 +1,10 @@
 # ECI Field QC — iOS app
 
-The native field app for inspectors. The repository root `AGENTS.md` still
-applies: pins are placed by the office, inspectors reach only assigned work, and
-the server authorizes every mutation. This app never offers office functions.
+The native field app for inspectors. The server, its rules and the API this
+app talks to live in the QC repo (`cnealblack8191/qc`); its `AGENTS.md` still
+applies here: pins are placed by the office, inspectors reach only assigned
+work, and the server authorizes every mutation. This app never offers office
+functions.
 
 ## Expo has changed — do not trust your training data
 
@@ -32,7 +34,7 @@ Run the typecheck and expo-doctor before declaring a change done.
   the UI never offers an action that will bounce; the server stays the authority.
 - `src/lib/store.tsx` — session, cached snapshot, outbox and the sync loop.
 - `src/lib/api/` — the API seam: `demo.ts` (on-device) and `http.ts`
-  (`/api/field/v1`, contract in `../docs/FIELD_IOS_API.md`).
+  (`/api/field/v1`, contract in the QC repo's `docs/FIELD_IOS_API.md`).
 - `src/components/` — shared UI. `src/demo/` — demo data and sheets.
 
 ## Rules
@@ -42,6 +44,6 @@ Run the typecheck and expo-doctor before declaring a change done.
 - Adding a library with native code means Expo Go can no longer run the app;
   a development build is needed from then on. Prefer modules Expo Go bundles.
 - Tap targets ≥ 44pt (primary field actions 56pt), input text ≥ 16pt — the
-  budgets in `../docs/MOBILE_FIELD_PLAN.md`.
+  budgets in the QC repo's `docs/MOBILE_FIELD_PLAN.md`.
 - A change to the stored shape of the outbox or snapshot must keep reading the
   old shape: an inspector may update the app with unsynced work on the device.

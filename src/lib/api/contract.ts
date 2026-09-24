@@ -4,7 +4,7 @@ import type { FieldSnapshot, FieldUser } from "../types";
 /**
  * The seam between the app and a QC server. Two implementations: the demo
  * server (on-device, no network) and the HTTP client for
- * `/api/field/v1` described in docs/FIELD_IOS_API.md.
+ * `/api/field/v1` described in the QC repo's docs/FIELD_IOS_API.md.
  */
 export interface FieldApi {
   readonly mode: "demo" | "live";

@@ -49,7 +49,7 @@ the server de-duplicates by the op's client id.
 
 ## Signing in for real
 
-Needs the mobile API on the QC server — see `../docs/FIELD_IOS_API.md`. Until it
+Needs the mobile API on the QC server — see `docs/FIELD_IOS_API.md` in the QC server repo (`cnealblack8191/qc`). Until it
 exists, *Sign in* reports that the server does not offer it yet; use the demo.
 
 ## Shipping to inspectors
@@ -59,7 +59,7 @@ TestFlight-style installs, `production` for the App Store. Bundle id
 `us.ecinc.qcfield`. Needs an Apple Developer account for ECI.
 
 Over-the-air updates are **not enabled** yet. The constraints, risks and a
-recommended setup are in `../docs/FIELD_IOS_DECISIONS.md`, with the other
+recommended setup are in `docs/FIELD_IOS_DECISIONS.md` in the QC server repo, with the other
 decisions and open questions.
 
 ## Checks

@@ -3,7 +3,7 @@ import type { FieldSnapshot, FieldUser } from "../types";
 import { ApiError, type FieldApi } from "./contract";
 
 /**
- * Client for the mobile API described in docs/FIELD_IOS_API.md.
+ * Client for the mobile API described in the QC repo's docs/FIELD_IOS_API.md.
  *
  * The server side of this contract does not exist yet: the web field app uses
  * cookie sessions and server actions, which a native app cannot call. Until
