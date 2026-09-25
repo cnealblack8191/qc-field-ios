@@ -1,10 +1,14 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Field, Notice } from "@/components/ui";
 import { DEFAULT_SERVER, useField } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
+
+/** Whether this phone was last used as a shared one; a shared phone usually stays shared. */
+const SHARED_KEY = "field.device.shared.v1";
 
 export default function SignInScreen() {
   const palette = usePalette();
@@ -15,6 +19,18 @@ export default function SignInScreen() {
   const [showServer, setShowServer] = useState(false);
   const [busy, setBusy] = useState<"live" | "demo" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [shared, setShared] = useState(false);
+
+  useEffect(() => {
+    void AsyncStorage.getItem(SHARED_KEY)
+      .then((value) => setShared(value === "yes"))
+      .catch(() => undefined);
+  }, []);
+
+  function changeShared(value: boolean) {
+    setShared(value);
+    void AsyncStorage.setItem(SHARED_KEY, value ? "yes" : "no").catch(() => undefined);
+  }
 
   async function submit(mode: "live" | "demo") {
     setProblem(null);
@@ -24,7 +40,7 @@ export default function SignInScreen() {
     }
     setBusy(mode);
     try {
-      await signIn({ mode, email, password, serverUrl });
+      await signIn({ mode, email, password, serverUrl, shared });
     } catch (error) {
       setProblem(error instanceof Error ? error.message : "Sign-in failed.");
     } finally {
@@ -81,6 +97,23 @@ export default function SignInScreen() {
                   value={serverUrl}
                 />
               ) : null}
+              <View style={styles.shared}>
+                <View style={styles.sharedText}>
+                  <Text style={[type.body, { color: palette.ink }]}>Shared phone</Text>
+                  <Text style={[type.footnote, { color: palette.muted, fontWeight: "400" }]}>
+                    {shared
+                      ? "Signs you out after 12 hours. No Face ID. Your unsynced work stays safe for your next sign-in."
+                      : "Turn on if other inspectors use this phone."}
+                  </Text>
+                </View>
+                <Switch
+                  accessibilityHint="Signs you out after 12 hours and turns off Face ID"
+                  accessibilityLabel="Shared phone"
+                  onValueChange={changeShared}
+                  trackColor={{ true: palette.ok, false: palette.lineStrong }}
+                  value={shared}
+                />
+              </View>
               <Button label="Sign in" large loading={busy === "live"} disabled={busy !== null} onPress={() => void submit("live")} />
               <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setShowServer((value) => !value)} style={styles.link}>
                 <Text style={[type.footnote, { color: palette.muted }]}>{showServer ? "Hide server" : "Change server"}</Text>
@@ -114,6 +147,8 @@ const styles = StyleSheet.create({
   brand: { alignItems: "center", gap: 10, paddingVertical: 12 },
   logo: { width: 84, height: 84, borderRadius: 20 },
   panel: { borderRadius: size.radius, padding: 18, gap: 14, borderCurve: "continuous" },
+  shared: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: size.tap },
+  sharedText: { flex: 1, gap: 2 },
   link: { alignSelf: "center", minHeight: size.tap, justifyContent: "center" },
   demo: { gap: 8 }
 });

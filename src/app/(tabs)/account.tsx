@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { Alert, Platform, Switch, Text, View } from "react-native";
+import { AppUpdate } from "@/components/app-update";
 import { Screen } from "@/components/screen";
 import { Button, Card, Meta, Notice, Row } from "@/components/ui";
 import { useLock } from "@/lib/lock";
@@ -16,7 +18,7 @@ export default function AccountScreen() {
 
   function confirmSignOut() {
     const message = pendingCount
-      ? `${pendingCount} change${pendingCount === 1 ? " has" : "s have"} not synced yet. They stay on this device and sync the next time you sign in.`
+      ? `${pendingCount} change${pendingCount === 1 ? " has" : "s have"} not synced yet. They stay on this device and sync the next time you sign in${session?.shared ? " on this phone" : ""}.`
       : "You will need your password to sign in again.";
     if (Platform.OS === "web") return void signOut();
     Alert.alert("Sign out?", message, [
@@ -31,14 +33,20 @@ export default function AccountScreen() {
         <Text style={[type.title, { color: palette.ink }]}>{view.user.name}</Text>
         <Meta>{view.user.email}</Meta>
         <Meta>{view.user.role === "INSPECTOR" ? "Inspector" : "Office"} · {isDemo ? "Demo data on this device" : session?.serverUrl}</Meta>
-        {expires ? <Meta>Signed in on this phone until {expires.toLocaleDateString()}.</Meta> : null}
+        {expires ? (
+          <Meta>
+            {session?.shared
+              ? `Shared phone: signs out at ${expires.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`
+              : `Signed in on this phone until ${expires.toLocaleDateString()}.`}
+          </Meta>
+        ) : null}
       </Card>
 
       {syncState === "auth" ? (
         <Card>
           <Text style={[type.headline, { color: palette.ink }]}>Sign in again to sync</Text>
           <Meta>
-            Your sign-in on this phone has ended{expires && expires.getTime() <= Date.now() ? " (45 days are up)" : ""}. Everything you
+            Your sign-in on this phone has ended{expires && expires.getTime() <= Date.now() && !session?.shared ? " (45 days are up)" : ""}. Everything you
             recorded is kept and sends as soon as you sign in.
           </Meta>
           <Button label="Sign in again" onPress={() => void signOut()} />
@@ -86,6 +94,8 @@ export default function AccountScreen() {
       <Meta>
         ECI Field QC {Constants.expoConfig?.version ?? ""} · Placing and scanning pins is done in the office app.
       </Meta>
+      {/* Off in Expo Go, the web preview and development builds. */}
+      {Updates.isEnabled ? <AppUpdate /> : null}
     </Screen>
   );
 }

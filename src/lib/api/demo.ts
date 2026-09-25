@@ -55,9 +55,11 @@ class DemoServer implements FieldApi {
     await this.save();
   }
 
-  async signIn(email: string, _password: string) {
+  async signIn(email: string, _password: string, shared: boolean) {
     await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
-    return { token: "demo-token", user: { ...DEMO_USER, email: email.trim() || DEMO_USER.email }, expiresAt: null };
+    // Like the server: a shared phone gets 12 hours, a personal demo never ends.
+    const expiresAt = shared ? new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() : null;
+    return { token: "demo-token", user: { ...DEMO_USER, email: email.trim() || DEMO_USER.email }, expiresAt };
   }
 
   async signOut() {}

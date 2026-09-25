@@ -32,8 +32,10 @@ interface Session {
   serverUrl: string;
   token: string;
   user: FieldUser;
-  /** When the server stops honouring the token (45 days after sign-in). Null in the demo. */
+  /** When the server stops honouring the token (45 days after sign-in, 12 hours on a shared phone). Null in the demo. */
   expiresAt: string | null;
+  /** Passed between inspectors: no Face ID, and signed out when the 12 hours are up. */
+  shared?: boolean;
 }
 
 export interface QueuedOp {
@@ -57,7 +59,7 @@ interface FieldStore {
   syncState: SyncState;
   lastSyncedAt: string | null;
   simulateOffline: boolean;
-  signIn(input: { mode: Mode; email: string; password: string; serverUrl?: string }): Promise<void>;
+  signIn(input: { mode: Mode; email: string; password: string; serverUrl?: string; shared?: boolean }): Promise<void>;
   signOut(): Promise<void>;
   /** Queue a write. Returns an error message instead if the op is not allowed. */
   enqueue(op: DistributiveOmit<FieldOp, "id" | "createdAt"> & { id?: string }): string | null;
@@ -316,12 +318,12 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
   );
 
   const signIn = useCallback<FieldStore["signIn"]>(
-    async ({ mode, email, password, serverUrl }) => {
+    async ({ mode, email, password, serverUrl, shared = false }) => {
       const target = { mode, serverUrl: (serverUrl || DEFAULT_SERVER).trim() };
       const api = apiFor(target);
       if (mode === "demo") demoServer.offline = false;
-      const { token, user, expiresAt } = await api.signIn(email.trim(), password);
-      const next: Session = { ...target, token, user, expiresAt };
+      const { token, user, expiresAt } = await api.signIn(email.trim(), password, shared);
+      const next: Session = { ...target, token, user, expiresAt, shared };
       // Outbox and cache are per user, so a shared iPad never shows one
       // inspector's queued work to the next.
       const [cached, queued] = await Promise.all([
@@ -363,6 +365,26 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
     setOutbox([]);
     setSyncState("idle");
   }, []);
+
+  // A shared phone signs itself out when its 12 hours are up, so the next
+  // inspector never opens the last one's walk. Checked on a timer and when the
+  // app comes back, since iOS pauses timers in the background. Unsynced work
+  // stays on the phone under its owner and sends when they next sign in.
+  useEffect(() => {
+    if (!session?.shared || !session.expiresAt) return;
+    const endsAt = new Date(session.expiresAt).getTime();
+    const check = () => {
+      if (Date.now() >= endsAt) void signOut();
+    };
+    const timer = setTimeout(check, Math.max(0, Math.min(endsAt - Date.now(), 2 ** 31 - 1)));
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") check();
+    });
+    return () => {
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [session, signOut]);
 
   const dismiss = useCallback(
     (opId: string) => {

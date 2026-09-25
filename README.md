@@ -56,15 +56,46 @@ out from Settings → Signed-in phones. The server side is `docs/FIELD_IOS_API.m
 in the QC repo (`cnealblack8191/qc`); until it is deployed, *Sign in* reports
 that the server does not offer it yet.
 
+A phone passed between inspectors is uncommon but allowed: ticking **Shared
+phone** at sign-in gets a 12-hour sign-in from the server, no Face ID, and an
+automatic sign-out when the 12 hours are up. The phone remembers the setting for
+the next person. Unsynced work stays on the phone under its owner.
+
 ## Shipping to inspectors
 
 Builds are made in the cloud with EAS (`eas.json`): `preview` for internal
 TestFlight-style installs, `production` for the App Store. Bundle id
 `us.ecinc.qcfield`. Needs an Apple Developer account for ECI.
 
-Over-the-air updates are **not enabled** yet. The constraints, risks and a
-recommended setup are in `docs/FIELD_IOS_DECISIONS.md` in the QC server repo, with the other
-decisions and open questions.
+### Over-the-air updates
+
+Approved by ECI (2026-09-25) and configured (`expo-updates`): screens, wording
+and logic can reach installed phones without a new App Store version. Anything
+native (a permission, a native library, the icon, an Expo SDK upgrade) still
+needs a store build.
+
+- `runtimeVersion` uses the `fingerprint` policy, so an update only reaches
+  builds whose native code matches it.
+- Checked when the app opens, downloaded in the background, used from the next
+  launch (`fallbackToCacheTimeout: 0`): a walk is never interrupted and no
+  signal never delays opening. Account shows "Restart to update", disabled while
+  changes are sending, and the running update's id for support.
+- Channels: `preview` (internal testers) and `production` (App Store), set per
+  build profile in `eas.json`. Publish to testers first:
+
+  ```bash
+  eas update --channel preview --message "What changed"
+  eas update --channel production --message "What changed" --rollout-percentage 10
+  ```
+
+- Still to do before the first store build, needing ECI's accounts: `eas init`
+  (links the Expo project and adds the update URL) and **code signing**, so a
+  phone rejects any update not signed with ECI's key. See "Signing updates"
+  in `docs/FIELD_IOS_DECISIONS.md` in the QC repo.
+
+Rules for every update: only additive changes to the stored outbox and snapshot,
+and the server keeps accepting older op shapes, because phones offline for days
+run older versions.
 
 ## Checks
 

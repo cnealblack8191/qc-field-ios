@@ -47,3 +47,7 @@ Run the typecheck and expo-doctor before declaring a change done.
   budgets in the QC repo's `docs/MOBILE_FIELD_PLAN.md`.
 - A change to the stored shape of the outbox or snapshot must keep reading the
   old shape: an inspector may update the app with unsynced work on the device.
+  Over-the-air updates make this sharper: a rollback runs older code over data
+  newer code wrote. Only add optional fields; never rename or remove one.
+- An over-the-air update must stay within the app's reviewed purpose (Apple
+  Guideline 2.5.2). A major new feature goes through a store build.

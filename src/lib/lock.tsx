@@ -14,6 +14,9 @@ import { useField } from "./store";
  *
  * Asked when the app opens, and when it comes back after 15 minutes away, so
  * an inspector flipping to the camera or a text is not prompted each time.
+ *
+ * Never offered on a shared phone: Face ID answers for whoever owns the
+ * phone's passcode, not for the inspector signed in to the app.
  */
 
 const RELOCK_AFTER_MS = 15 * 60 * 1000;
@@ -54,6 +57,7 @@ async function readCapability(): Promise<{ available: boolean; kind: Kind }> {
 export function LockProvider({ children }: { children: ReactNode }) {
   const { session } = useField();
   const userId = session?.user.id ?? null;
+  const shared = Boolean(session?.shared);
   const [available, setAvailable] = useState(false);
   const [kind, setKind] = useState<Kind>("Face ID");
   const [enabled, setEnabledState] = useState(false);
@@ -71,7 +75,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
   // On sign-in or launch: read this inspector's choice, lock if it is on, and
   // offer it once if they have never been asked.
   useEffect(() => {
-    if (!userId) {
+    if (!userId || shared) {
       setEnabledState(false);
       setLocked(false);
       return;
@@ -103,7 +107,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, available, kind]);
+  }, [userId, shared, available, kind]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
@@ -141,7 +145,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Context.Provider value={{ available, kind, enabled, locked: locked && enabled && available, setEnabled, unlock }}>
+    <Context.Provider value={{ available: available && !shared, kind, enabled, locked: locked && enabled && available && !shared, setEnabled, unlock }}>
       {children}
     </Context.Provider>
   );

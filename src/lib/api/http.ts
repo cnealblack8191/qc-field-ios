@@ -50,11 +50,11 @@ export class HttpFieldApi implements FieldApi {
     throw new ApiError(message, "rejected");
   }
 
-  async signIn(email: string, password: string) {
+  async signIn(email: string, password: string, shared: boolean) {
     const response = await this.request("/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, device: this.device })
+      body: JSON.stringify({ email, password, device: this.device, shared })
     });
     return (await response.json()) as { token: string; user: FieldUser; expiresAt: string | null };
   }
