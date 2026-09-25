@@ -30,6 +30,14 @@ export function uncheckedPins(snapshot: FieldSnapshot, phaseId: string) {
   return snapshot.pins.filter((pin) => sheetIds.has(pin.sheetId) && pin.status === "UNCHECKED").length;
 }
 
+/** The server sends a report to the office only when it is whole (checkReportCompleteness). */
+export function reportGaps(report: InspectionReport) {
+  return {
+    unanswered: report.answers.filter((answer) => !answer.status).length,
+    noReason: report.answers.filter((answer) => answer.status === "no" && !answer.comments.trim()).length
+  };
+}
+
 export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string): string | null {
   const phaseOf = (phaseId: string) => snapshot.phases.find((phase) => phase.id === phaseId);
   const itemOf = (itemId: string) => snapshot.items.find((item) => item.id === itemId);
@@ -82,6 +90,14 @@ export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string)
       const report = reportOf(op.reportId);
       if (!report) return "That inspection is no longer assigned to you.";
       if (!isReportEditable(report, userId)) return "This inspection has been sent to the office.";
+      if (op.kind === "report.submit") {
+        const gaps = reportGaps(report);
+        const parts = [
+          gaps.unanswered ? `${gaps.unanswered} unanswered` : "",
+          gaps.noReason ? `${gaps.noReason} "No" without a comment` : ""
+        ].filter(Boolean);
+        if (parts.length) return `Not sent yet: ${parts.join(", ")}. Your answers are saved.`;
+      }
       return null;
     }
   }

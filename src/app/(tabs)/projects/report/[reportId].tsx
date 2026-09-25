@@ -8,7 +8,7 @@ import { SyncBanner } from "@/components/sync-status";
 import { Button, Card, EmptyState, Field, Meta, Notice, PhotoStrip, Pill, ProgressBar, Row } from "@/components/ui";
 import { haptic } from "@/lib/device";
 import { equipmentType, gearPhase, reportStatus } from "@/lib/labels";
-import { isReportEditable } from "@/lib/rules";
+import { isReportEditable, reportGaps } from "@/lib/rules";
 import { reportProgress } from "@/lib/select";
 import { useField, useView } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
@@ -46,6 +46,7 @@ export default function ReportScreen() {
   const status = reportStatus[report.status];
   const openCount = progress.total - progress.answered;
   const flagged = report.answers.filter((item) => item.status === "no");
+  const gaps = reportGaps(report);
 
   function answer(item: ChecklistAnswer, next: AnswerStatus, comments: string) {
     const result = enqueue({ kind: "report.answer", reportId: report!.id, answerId: item.id, status: next, comments });
@@ -71,9 +72,7 @@ export default function ReportScreen() {
       if (result) return setProblem(result);
       haptic.success();
     };
-    const message = openCount
-      ? `${openCount} item${openCount === 1 ? " is" : "s are"} unanswered. You will not be able to edit after sending.`
-      : "You will not be able to edit after sending.";
+    const message = "You will not be able to edit after sending.";
     if (Platform.OS === "web") return go();
     Alert.alert("Send to the office?", message, [
       { text: "Keep working", style: "cancel" },
@@ -187,7 +186,14 @@ export default function ReportScreen() {
                 tone="open"
               />
             ) : null}
-            <Button icon="cloudUp" label="Send to office" large onPress={submit} />
+            {gaps.unanswered || gaps.noReason ? (
+              <Meta>
+                Answer every item{gaps.noReason ? " and add a comment to each No" : ""} to send this to the office
+                {" "}({[gaps.unanswered ? `${gaps.unanswered} unanswered` : "", gaps.noReason ? `${gaps.noReason} No without a comment` : ""].filter(Boolean).join(", ")}).
+              </Meta>
+            ) : (
+              <Button icon="cloudUp" label="Send to office" large onPress={submit} />
+            )}
           </Card>
         ) : null}
       </View>
