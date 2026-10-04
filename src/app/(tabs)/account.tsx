@@ -4,6 +4,7 @@ import { Alert, Platform, Switch, Text, View } from "react-native";
 import { AppUpdate } from "@/components/app-update";
 import { Screen } from "@/components/screen";
 import { Button, Card, Meta, Notice, Row } from "@/components/ui";
+import { openPrivacyPolicy } from "@/lib/links";
 import { useLock } from "@/lib/lock";
 import { useField, useView } from "@/lib/store";
 import { type, usePalette } from "@/lib/theme";
@@ -91,6 +92,7 @@ export default function AccountScreen() {
 
       {pendingCount ? <Notice icon="cloudUp" message={`${pendingCount} change${pendingCount === 1 ? "" : "s"} waiting to sync.`} tone="open" /> : null}
       <Button label="Sign out" onPress={confirmSignOut} variant="destructive" />
+      <Button accessibilityHint="Opens in Safari" label="Privacy policy" onPress={openPrivacyPolicy} variant="plain" />
       <Meta>
         ECI Field QC {Constants.expoConfig?.version ?? ""} · Drawing walks and reinspection are on the web field app.
       </Meta>
