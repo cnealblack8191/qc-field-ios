@@ -1,17 +1,25 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Text } from "react-native";
 import { Icon } from "@/components/icon";
 import { Screen } from "@/components/screen";
-import { Card, EmptyState, Meta, Pill, ProgressBar, Row, SectionHeader } from "@/components/ui";
-import { equipmentType, gearPhase, phaseStatus, reportStatus } from "@/lib/labels";
-import { phaseCounts, reportProgress } from "@/lib/select";
-import { useView } from "@/lib/store";
+import { Button, Card, EmptyState, Meta, Notice, Pill, ProgressBar, Row, SectionHeader } from "@/components/ui";
+import { equipmentType, gearPhase, reportStatus } from "@/lib/labels";
+import { reportProgress } from "@/lib/select";
+import { useField, useView } from "@/lib/store";
 import { type, usePalette } from "@/lib/theme";
 
+/**
+ * A project offers two things in the field, by ECI's decision (2026-10-04):
+ * log a punch item, and inspect the gear assigned to you. Drawing-pin walks
+ * and reinspection are done on the web field app, not here.
+ */
 export default function ProjectScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const palette = usePalette();
   const view = useView();
+  // Every hook before the early return below: a project unassigned while
+  // this screen is open must not change the number of hooks run.
+  const { pendingCount } = useField();
   const project = view.projects.find((candidate) => candidate.id === projectId);
 
   if (!project) {
@@ -22,67 +30,53 @@ export default function ProjectScreen() {
     );
   }
 
-  const phases = view.phases.filter((phase) => phase.projectId === project.id).sort((a, b) => a.sortOrder - b.sortOrder);
+  const openPhases = view.phases.filter((phase) => phase.projectId === project.id && phase.status !== "CLOSED");
+  const projectPhaseIds = new Set(view.phases.filter((phase) => phase.projectId === project.id).map((phase) => phase.id));
+  const mine = view.items.filter((item) => projectPhaseIds.has(item.phaseId) && item.createdById === view.user.id && item.status !== "VOID");
   const reports = view.reports.filter((report) => report.projectId === project.id);
-  const openTotal = phases.reduce((total, phase) => total + phaseCounts(view, phase.id).open, 0);
 
   return (
     <Screen>
       <Stack.Screen options={{ title: project.name }} />
       <Meta>{project.jobNumber} · {project.address}</Meta>
 
-      <SectionHeader detail="Walk a phase to log and verify punch items." right={<Pill label={`${openTotal} open`} tone={openTotal ? "open" : "done"} />} title="Punch walks" />
-      <Card style={{ paddingVertical: 4 }}>
-        {phases.map((phase, index) => {
-          const counts = phaseCounts(view, phase.id);
-          const status = phaseStatus[phase.status];
-          return (
-            <View key={phase.id}>
-              {index ? <View style={[styles.divider, { backgroundColor: palette.line }]} /> : null}
-              <Card
-                accessibilityLabel={`${phase.name}, ${status.label}, ${counts.open} open`}
-                onPress={() => router.push({ pathname: "/projects/walk/[phaseId]", params: { phaseId: phase.id } })}
-                style={styles.row}
-              >
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Row>
-                    <Text style={[type.headline, { color: palette.ink }]}>{phase.name}</Text>
-                    {phase.hasDrawings ? <Icon color={palette.muted} name="drawing" size={16} /> : null}
-                  </Row>
-                  <Meta>
-                    {status.label}
-                    {counts.total ? ` · ${counts.total} logged · ${counts.verified} verified` : ""}
-                  </Meta>
-                </View>
-                {counts.open ? <Pill label={`${counts.open} open`} tone="open" /> : null}
-                <Icon color={palette.muted} name="chevron" size={16} />
-              </Card>
-            </View>
-          );
-        })}
-      </Card>
+      <SectionHeader
+        detail={mine.length ? `${mine.length} logged by you on this project${pendingCount ? "; unsent changes are on the Sync tab" : ""}.` : "Photo first, then where and what."}
+        title="Punch items"
+      />
+      {openPhases.length ? (
+        <Button
+          accessibilityHint="Opens the camera-first form for a new punch item"
+          icon="camera"
+          label="Log a punch item"
+          large
+          onPress={() => router.push({ pathname: "/log-item", params: { projectId: project.id } })}
+        />
+      ) : (
+        <Notice icon="checkCircle" message="The office has closed every phase on this project. Contact the office if more work is found." tone="done" />
+      )}
 
-      <SectionHeader detail="Gear checklists assigned to you on this project." title="Equipment" />
+      <SectionHeader detail="Gear checklists assigned to you on this project." title="Gear inspections" />
       {reports.length ? (
         reports.map((report) => {
           const gear = view.equipment.find((candidate) => candidate.id === report.equipmentId);
           const progress = reportProgress(view, report.id);
-          const status = reportStatus[report.status];
+          const status = reportStatus[report.status] ?? { label: String(report.status), tone: "neutral" as const };
           return (
             <Card
-              accessibilityLabel={`${gear?.tag}, ${equipmentType[gear?.type ?? "PANEL_BOARD"]}, ${status.label}, ${progress.answered} of ${progress.total} answered`}
+              accessibilityLabel={`${gear?.tag ?? "Equipment"}, ${equipmentType[gear?.type ?? "PANEL_BOARD"] ?? "Equipment"}, ${status.label}, ${progress.answered} of ${progress.total} answered`}
               key={report.id}
               onPress={() => router.push({ pathname: "/projects/report/[reportId]", params: { reportId: report.id } })}
             >
               <Row style={{ justifyContent: "space-between" }}>
                 <Text style={[type.caption, { color: palette.muted }]}>
-                  {equipmentType[gear?.type ?? "PANEL_BOARD"].toUpperCase()} · {gearPhase[report.gearPhase].toUpperCase()}
+                  {(equipmentType[gear?.type ?? "PANEL_BOARD"] ?? "Equipment").toUpperCase()} · {(gearPhase[report.gearPhase] ?? String(report.gearPhase)).toUpperCase()}
                 </Text>
                 <Pill label={status.label} tone={status.tone} />
               </Row>
               <Row>
                 <Icon color={palette.accent} name="gear" size={18} />
-                <Text style={[type.headline, { color: palette.ink, fontSize: 19 }]}>{gear?.tag}</Text>
+                <Text style={[type.headline, { color: palette.ink, fontSize: 19 }]}>{gear?.tag ?? "Equipment"}</Text>
               </Row>
               <Meta>{gear?.location}</Meta>
               <ProgressBar value={progress.percent} />
@@ -100,7 +94,3 @@ export default function ProjectScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 0, paddingHorizontal: 0, paddingVertical: 12 },
-  divider: { height: StyleSheet.hairlineWidth }
-});

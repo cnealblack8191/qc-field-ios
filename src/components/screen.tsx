@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useField } from "@/lib/store";
 import { size, usePalette } from "@/lib/theme";
 import { SyncBanner } from "./sync-status";
+import { Notice } from "./ui";
 
 /**
  * The scroll container every list screen uses: large-title aware, pull to
@@ -12,7 +13,7 @@ import { SyncBanner } from "./sync-status";
  */
 export function Screen({ children, refreshable = true, footer }: { children: ReactNode; refreshable?: boolean; footer?: ReactNode }) {
   const palette = usePalette();
-  const { syncNow } = useField();
+  const { syncNow, session } = useField();
   const [refreshing, setRefreshing] = useState(false);
 
   const scroll = (
@@ -36,6 +37,11 @@ export function Screen({ children, refreshable = true, footer }: { children: Rea
       style={{ backgroundColor: palette.bg }}
     >
       <View style={styles.column}>
+        {session?.mode === "demo" ? (
+          // On every screen, so nobody, App Review included, mistakes sample
+          // data for a real job.
+          <Notice icon="info" message="Demo: sample data on this phone only. Nothing is sent to ECI." tone="review" />
+        ) : null}
         <SyncBanner />
         {children}
       </View>

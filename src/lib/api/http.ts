@@ -1,3 +1,4 @@
+import { photoMimeType, resolvePhotoUri } from "@/lib/device";
 import type { FieldOp } from "../ops";
 import type { FieldSnapshot, FieldUser } from "../types";
 import { ApiError, type FieldApi } from "./contract";
@@ -8,6 +9,18 @@ import { ApiError, type FieldApi } from "./contract";
  * Served by the QC server under app/api/field/v1. A server that predates it
  * answers the sign-in with 404, which is reported plainly.
  */
+/**
+ * A 200 that is not JSON is usually a Wi-Fi sign-in page standing in for the
+ * server. Say so, instead of showing a raw parse error.
+ */
+async function readJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    throw new ApiError("The server sent an unexpected answer. If this Wi-Fi has a sign-in page, open it in Safari first, then try again.", "retry");
+  }
+}
+
 export class HttpFieldApi implements FieldApi {
   readonly mode = "live" as const;
 
@@ -46,7 +59,7 @@ export class HttpFieldApi implements FieldApi {
       throw new ApiError("This server does not offer the mobile API yet. Use the demo, or the web field app.", "rejected");
     }
     // 408, 429 and 5xx are worth retrying; any other refusal is final.
-    if (response.status === 408 || response.status === 429 || response.status >= 500) throw new ApiError(message, "retry");
+    if (response.status === 408 || response.status === 429 || response.status >= 500) throw new ApiError(message, "retry", true);
     throw new ApiError(message, "rejected");
   }
 
@@ -56,7 +69,7 @@ export class HttpFieldApi implements FieldApi {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, device: this.device, shared })
     });
-    return (await response.json()) as { token: string; user: FieldUser; expiresAt: string | null };
+    return (await readJson(response)) as { token: string; user: FieldUser; expiresAt: string | null };
   }
 
   async signOut(token: string) {
@@ -65,16 +78,21 @@ export class HttpFieldApi implements FieldApi {
 
   async fetchSnapshot(token: string) {
     const response = await this.request("/snapshot", { method: "GET", token, timeoutMs: 45_000 });
-    return (await response.json()) as FieldSnapshot;
+    return (await readJson(response)) as FieldSnapshot;
   }
 
   async sendOp(token: string, op: FieldOp) {
     const photoUris = "photoUris" in op ? op.photoUris : op.kind === "report.photo" ? [op.photoUri] : [];
     const form = new FormData();
     form.append("op", JSON.stringify(op));
-    photoUris.forEach((uri, index) => {
-      // React Native's FormData takes a file descriptor object in place of a Blob.
-      form.append("photo", { uri, name: `photo-${index}.jpg`, type: "image/jpeg" } as unknown as Blob);
+    photoUris.forEach((stored, index) => {
+      const uri = resolvePhotoUri(stored);
+      const type = photoMimeType(uri);
+      const extension = type === "image/jpeg" ? "jpg" : type.split("/")[1];
+      // React Native's FormData takes a file descriptor object in place of a
+      // Blob. The declared type matches the file, so the server converts what
+      // needs converting instead of trusting a wrong label.
+      form.append("photo", { uri, name: `photo-${index}.${extension}`, type } as unknown as Blob);
     });
     await this.request("/ops", {
       method: "POST",

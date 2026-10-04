@@ -26,7 +26,9 @@ export interface FieldApi {
 export class ApiError extends Error {
   constructor(
     message: string,
-    readonly disposition: "retry" | "rejected" | "auth"
+    readonly disposition: "retry" | "rejected" | "auth",
+    /** The server answered (408, 429, 5xx), as opposed to no answer at all. */
+    readonly serverAnswered = false
   ) {
     super(message);
     this.name = "ApiError";

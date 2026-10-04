@@ -37,12 +37,56 @@ export const secureSession = {
  * photo is the only copy of the evidence until it syncs, so it is moved into
  * the app's documents directory first.
  */
+const PHOTO_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  heic: "image/heic",
+  heif: "image/heif",
+  webp: "image/webp"
+};
+
+/** A photo's file extension, kept true to its contents. */
+function photoExtension(uri: string) {
+  const extension = uri.split("?")[0]!.split(".").pop()?.toLowerCase() ?? "";
+  return extension in PHOTO_TYPES ? extension : "jpg";
+}
+
+/** The type to declare when uploading a photo, from its real extension. */
+export function photoMimeType(uri: string) {
+  return PHOTO_TYPES[photoExtension(uri)]!;
+}
+
+/**
+ * Where a queued photo is now. iOS can move the app's container when the app
+ * is updated or restored, so a stored absolute path to a queued photo is
+ * rebuilt against today's documents directory from its file name.
+ */
+export function resolvePhotoUri(uri: string) {
+  if (Platform.OS === "web" || !uri.includes("/queued-photos/")) return uri;
+  try {
+    return new File(Paths.document, "queued-photos", uri.split("/").pop()!).uri;
+  } catch {
+    return uri;
+  }
+}
+
+/** Whether a photo waiting to send is still on the phone. */
+export function photoExists(uri: string) {
+  if (Platform.OS === "web" || !uri.startsWith("file:")) return true;
+  try {
+    return new File(resolvePhotoUri(uri)).exists;
+  } catch {
+    return true;
+  }
+}
+
 export async function keepPhoto(uri: string): Promise<string> {
   if (Platform.OS === "web") return uri;
   try {
     const directory = new Directory(Paths.document, "queued-photos");
     if (!directory.exists) directory.create({ intermediates: true, idempotent: true });
-    const extension = uri.split(".").pop()?.toLowerCase() === "png" ? "png" : "jpg";
+    const extension = photoExtension(uri);
     const target = new File(directory, `${newId()}.${extension}`);
     await new File(uri).copy(target);
     return target.uri;
@@ -55,7 +99,7 @@ export async function keepPhoto(uri: string): Promise<string> {
 export async function forgetPhoto(uri: string) {
   if (Platform.OS === "web" || !uri.includes("queued-photos")) return;
   try {
-    const file = new File(uri);
+    const file = new File(resolvePhotoUri(uri));
     if (file.exists) file.delete();
   } catch {
     // Already gone.

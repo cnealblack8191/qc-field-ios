@@ -1,9 +1,9 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PhotoCapture } from "@/components/photo-capture";
 import { Button, Field, Notice } from "@/components/ui";
-import { haptic } from "@/lib/device";
+import { forgetPhoto, haptic } from "@/lib/device";
 import { useField, useView } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
 import type { Photo } from "@/lib/types";
@@ -14,12 +14,28 @@ import type { Photo } from "@/lib/types";
  * for a signal.
  */
 export default function LogItemScreen() {
-  const { phaseId } = useLocalSearchParams<{ phaseId: string }>();
+  const params = useLocalSearchParams<{ phaseId?: string; projectId?: string }>();
   const palette = usePalette();
   const view = useView();
   const { enqueue, online } = useField();
+  const projectId = params.projectId ?? view.phases.find((candidate) => candidate.id === params.phaseId)?.projectId;
+  const project = view.projects.find((candidate) => candidate.id === projectId);
+  // Every punch item belongs to one phase of the project. Only open phases
+  // take new items; with just one there is nothing to choose.
+  const openPhases = view.phases
+    .filter((candidate) => candidate.projectId === projectId && candidate.status !== "CLOSED")
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  // Preselected: the only open phase, or the open phase this inspector last
+  // logged an item on here, so the usual case is one tap fewer.
+  const lastUsedPhaseId = view.items
+    .filter((item) => item.createdById === view.user.id && openPhases.some((candidate) => candidate.id === item.phaseId))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.phaseId;
+  const [chosenPhaseId, setChosenPhaseId] = useState<string | null>(
+    params.phaseId ?? (openPhases.length === 1 ? openPhases[0]!.id : (lastUsedPhaseId ?? null))
+  );
+  const phaseId = chosenPhaseId ?? "";
   const phase = view.phases.find((candidate) => candidate.id === phaseId);
-  const equipment = view.equipment.filter((candidate) => candidate.projectId === phase?.projectId);
+  const equipment = view.equipment.filter((candidate) => candidate.projectId === projectId);
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [location, setLocation] = useState("");
@@ -28,11 +44,40 @@ export default function LogItemScreen() {
   const [responsibleParty, setResponsibleParty] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
 
-  // The last locations used on this walk, one tap away: an inspector logs
+  // The last locations used on this project, one tap away: an inspector logs
   // several items in the same room.
-  const recentLocations = [...new Set(view.items.filter((item) => item.phaseId === phaseId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => item.location))].slice(0, 3);
+  const projectPhaseIds = new Set(view.phases.filter((candidate) => candidate.projectId === projectId).map((candidate) => candidate.id));
+  const recentLocations = [...new Set(view.items.filter((item) => projectPhaseIds.has(item.phaseId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => item.location))].slice(0, 3);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const dirty = Boolean(photos.length || location.trim() || description.trim() || responsibleParty.trim());
+
+  /** A problem is said where it can be seen: the form scrolls up to it. */
+  function report(message: string) {
+    haptic.warning();
+    setProblem(message);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
+  function leave() {
+    const discard = () => {
+      // Copies taken for this form only; nothing queued refers to them.
+      photos.forEach((photo) => void forgetPhoto(photo.uri));
+      router.back();
+    };
+    if (!dirty) return router.back();
+    if (Platform.OS === "web") {
+      if (globalThis.confirm?.("Discard this punch item?") ?? true) discard();
+      return;
+    }
+    Alert.alert("Discard this punch item?", "The photos and text you entered will be lost.", [
+      { text: "Keep editing", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: discard }
+    ]);
+  }
 
   function save(another: boolean) {
+    if (!phase) return report("Choose the phase this item belongs to.");
     const result = enqueue({
       kind: "punch.create",
       phaseId,
@@ -42,10 +87,7 @@ export default function LogItemScreen() {
       responsibleParty: responsibleParty.trim() || null,
       photoUris: photos.map((photo) => photo.uri)
     });
-    if (result) {
-      haptic.warning();
-      return setProblem(result);
-    }
+    if (result) return report(result);
     haptic.success();
     if (another) {
       setPhotos([]);
@@ -62,15 +104,45 @@ export default function LogItemScreen() {
       <Stack.Screen
         options={{
           title: "Log punch item",
-          headerLeft: () => <Button label="Cancel" onPress={() => router.back()} variant="plain" />
+          headerLeft: () => <Button label="Cancel" onPress={leave} variant="plain" />,
+          // While there is something to lose, a swipe down cannot close the
+          // form; Cancel asks first.
+          gestureEnabled: !dirty
         }}
       />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" ref={scrollRef}>
         <View style={styles.column}>
           <Text style={[type.subhead, { color: palette.muted }]}>
-            {phase?.name} · {online ? "Saves instantly and syncs." : "No signal — saves on this device and syncs later."}
+            {project?.name ?? ""}
+            {phase && openPhases.length === 1 ? ` · ${phase.name}` : ""} ·{" "}
+            {online ? "Saves instantly and syncs." : "No signal — saves on this device and syncs later."}
           </Text>
           {problem ? <Notice icon="warning" message={problem} tone="danger" /> : null}
+
+          {openPhases.length > 1 ? (
+            <View style={{ gap: 6 }}>
+              <Text style={[type.footnote, { color: palette.inkSoft }]}>Phase</Text>
+              <View style={styles.chips}>
+                {openPhases.map((candidate) => {
+                  const selected = candidate.id === phaseId;
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      key={candidate.id}
+                      onPress={() => {
+                        setChosenPhaseId(candidate.id);
+                        setProblem(null);
+                      }}
+                      style={[styles.chip, { backgroundColor: selected ? palette.ink : palette.surfaceMuted }]}
+                    >
+                      <Text style={[type.subhead, { color: selected ? palette.bg : palette.ink, fontWeight: "700" }]}>{candidate.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
 
           <PhotoCapture onChange={setPhotos} photos={photos} />
 

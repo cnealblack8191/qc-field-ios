@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Field, Notice } from "@/components/ui";
 import { DEFAULT_SERVER, useField } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
+import { openPrivacyPolicy } from "@/lib/links";
 
 /** Whether this phone was last used as a shared one; a shared phone usually stays shared. */
 const SHARED_KEY = "field.device.shared.v1";
@@ -57,7 +58,7 @@ export default function SignInScreen() {
               <Image accessibilityIgnoresInvertColors source={require("../../assets/icon.png")} style={styles.logo} />
               <Text accessibilityRole="header" style={[type.largeTitle, { color: "#fff" }]}>ECI Field QC</Text>
               <Text style={[type.callout, { color: "#9aa4af", textAlign: "center" }]}>
-                Punch walks, drawing pins and gear inspections — built to keep working with no signal.
+                Gear inspections and punch items — built to keep working with no signal.
               </Text>
             </View>
 
@@ -133,6 +134,7 @@ export default function SignInScreen() {
               <Text style={[type.footnote, { color: "#9aa4af", textAlign: "center", fontWeight: "400" }]}>
                 Sample projects on this device only. Nothing is sent anywhere.
               </Text>
+              <Button accessibilityHint="Opens in Safari" label="Privacy policy" onPress={openPrivacyPolicy} variant="plain" />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

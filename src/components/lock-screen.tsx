@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLock } from "@/lib/lock";
 import { useField } from "@/lib/store";
@@ -20,8 +20,11 @@ export function LockScreen() {
 
   if (!locked) return null;
 
+  // A native full-screen modal, so the cover sits above everything,
+  // including a form already open as a modal (Log punch item).
   return (
-    <View style={[StyleSheet.absoluteFill, styles.cover, { backgroundColor: palette.brand }]}>
+    <Modal animationType="none" onRequestClose={() => undefined} presentationStyle="fullScreen" visible>
+    <View style={[styles.cover, { backgroundColor: palette.brand }]}>
       <SafeAreaView style={styles.content}>
         <Image accessibilityIgnoresInvertColors source={require("../../assets/icon.png")} style={styles.logo} />
         <Text accessibilityRole="header" style={[type.title, { color: "#fff" }]}>ECI Field QC</Text>
@@ -40,11 +43,12 @@ export function LockScreen() {
         </View>
       </SafeAreaView>
     </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  cover: { zIndex: 100 },
+  cover: { flex: 1 },
   content: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: size.gutter },
   logo: { width: 96, height: 96, borderRadius: 22 },
   actions: { alignSelf: "stretch", maxWidth: 420, width: "100%", marginTop: 24, gap: 12, alignItems: "stretch" }

@@ -1,8 +1,9 @@
 # ECI Field QC — iOS
 
-The native iOS app for ECI field inspectors: assigned projects, punch walks,
-drawing-pin walks and equipment checklists, built to keep working with no
-signal. Expo (SDK 57) + React Native + TypeScript, Expo Router.
+The native iOS app for ECI field inspectors. Per project it offers two things:
+log a punch item, and the gear inspection checklists assigned to the
+inspector. It is built to keep working with no signal. Testing and App Store
+steps are in [LAUNCH.md](LAUNCH.md). Expo (SDK 57) + React Native + TypeScript, Expo Router.
 
 It does what the `/field` web app does, natively — and nothing the office does.
 Pins are placed and scanned in the office app only.
@@ -21,14 +22,12 @@ Pins are placed and scanned in the office app only.
 
 Things to try:
 
-- **Projects → Oak Ridge Elementary → Mason → Walk the drawings → E-101.**
-  Tap *Next unchecked pin*, then *Pass*: the next pin comes up by itself.
-  *Punch* asks for a note and photos and raises a punch item.
-- **Account → Simulate no signal**, then log items or record pins. Everything
+- **Projects → Oak Ridge Elementary → Log a punch item.** Photo first, then
+  where and what.
+- **Account → Simulate no signal**, then log items or answer checklists. Everything
   saves instantly, shows *Not yet synced*, and appears on the **Sync** tab.
   Switch it off and watch the queue drain.
 - **Projects → Oak Ridge → MSB** for a switchgear Final checklist.
-- **Punch → Reinspect** for items a contractor says are done.
 
 The browser demo (`npm run export:web`) is the same code, for a quick look; the
 camera, haptics and SF Symbols only appear on the phone.

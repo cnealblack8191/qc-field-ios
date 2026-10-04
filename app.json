@@ -27,7 +27,6 @@
       "infoPlist": {
         "NSCameraUsageDescription": "ECI Field QC uses the camera to photograph deficiencies and inspection evidence.",
         "NSPhotoLibraryUsageDescription": "ECI Field QC attaches photos you choose from your library to punch items and inspections.",
-        "NSPhotoLibraryAddUsageDescription": "ECI Field QC can save inspection photos to your library.",
         "UIRequiresFullScreen": false,
         "NSFaceIDUsageDescription": "ECI Field QC uses Face ID to unlock the app instead of your password."
       },
@@ -81,7 +80,8 @@
         "expo-image-picker",
         {
           "photosPermission": "ECI Field QC attaches photos you choose from your library to punch items and inspections.",
-          "cameraPermission": "ECI Field QC uses the camera to photograph deficiencies and inspection evidence."
+          "cameraPermission": "ECI Field QC uses the camera to photograph deficiencies and inspection evidence.",
+          "microphonePermission": false
         }
       ],
       [
