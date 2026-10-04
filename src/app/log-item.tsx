@@ -25,8 +25,13 @@ export default function LogItemScreen() {
   const openPhases = view.phases
     .filter((candidate) => candidate.projectId === projectId && candidate.status !== "CLOSED")
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  // Preselected: the only open phase, or the open phase this inspector last
+  // logged an item on here, so the usual case is one tap fewer.
+  const lastUsedPhaseId = view.items
+    .filter((item) => item.createdById === view.user.id && openPhases.some((candidate) => candidate.id === item.phaseId))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.phaseId;
   const [chosenPhaseId, setChosenPhaseId] = useState<string | null>(
-    params.phaseId ?? (openPhases.length === 1 ? openPhases[0]!.id : null)
+    params.phaseId ?? (openPhases.length === 1 ? openPhases[0]!.id : (lastUsedPhaseId ?? null))
   );
   const phaseId = chosenPhaseId ?? "";
   const phase = view.phases.find((candidate) => candidate.id === phaseId);
