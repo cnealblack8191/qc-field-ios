@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/icon";
 import { Screen } from "@/components/screen";
 import { Button, Card, EmptyState, Meta, Notice, Row } from "@/components/ui";
@@ -14,7 +14,20 @@ import { type, usePalette } from "@/lib/theme";
 export default function SyncScreen() {
   const palette = usePalette();
   const view = useView();
-  const { outbox, online, syncState, lastSyncedAt, syncNow, dismiss, pendingCount } = useField();
+  const { outbox, online, syncState, lastSyncedAt, syncNow, dismiss, retry, pendingCount } = useField();
+
+  /** Removing queued work throws it away for good, so it is always confirmed. */
+  function confirmRemove(opId: string, what: string) {
+    const message = `"${what}" and any photos with it will be deleted from this phone. This cannot be undone.`;
+    if (Platform.OS === "web") {
+      if (globalThis.confirm?.(message) ?? true) dismiss(opId);
+      return;
+    }
+    Alert.alert("Remove this change?", message, [
+      { text: "Keep it", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => dismiss(opId) }
+    ]);
+  }
 
   const headline = syncState === "auth"
     ? "Sign in again to sync"
@@ -45,23 +58,36 @@ export default function SyncScreen() {
       </Card>
 
       {outbox.length ? (
-        outbox.map((entry) => (
-          <Card key={entry.op.id} style={entry.rejected ? { borderColor: palette.danger } : undefined}>
+        outbox.map((entry) => {
+          const what = describeOp(entry.op, view);
+          const problem = Boolean(entry.rejected || entry.stuck);
+          return (
+          <Card key={entry.op.id} style={problem ? { borderColor: palette.danger } : undefined}>
             <Row style={{ justifyContent: "space-between" }}>
-              <Text style={[type.headline, { color: palette.ink, flex: 1 }]}>{describeOp(entry.op, view)}</Text>
-              <Icon color={entry.rejected ? palette.danger : palette.warning} name={entry.rejected ? "warning" : "cloudUp"} size={18} />
+              <Text style={[type.headline, { color: palette.ink, flex: 1 }]}>{what}</Text>
+              <Icon color={problem ? palette.danger : palette.warning} name={problem ? "warning" : "cloudUp"} size={18} />
             </Row>
+            {entry.op.kind === "punch.create" ? (
+              <Meta>{entry.op.location} · {entry.op.description}</Meta>
+            ) : null}
             <Meta>Saved {relativeTime(entry.op.createdAt)}{entry.attempts ? ` · ${entry.attempts} attempt${entry.attempts === 1 ? "" : "s"}` : ""}</Meta>
             {entry.rejected ? (
               <>
                 <Notice icon="warning" message={`The server refused this: ${entry.rejected}`} tone="danger" />
-                <Button label="Dismiss" onPress={() => dismiss(entry.op.id)} variant="destructive" />
+                <Button label="Remove" onPress={() => confirmRemove(entry.op.id, what)} variant="destructive" />
+              </>
+            ) : entry.stuck ? (
+              <>
+                <Notice icon="warning" message={`This has not sent: ${entry.stuck} Changes to the same item wait behind it; everything else keeps syncing.`} tone="danger" />
+                <Button disabled={!online} icon="sync" label="Send again" onPress={() => retry(entry.op.id)} variant="secondary" />
+                <Button label="Remove" onPress={() => confirmRemove(entry.op.id, what)} variant="destructive" />
               </>
             ) : entry.lastError ? (
               <Text style={[type.footnote, styles.error, { color: palette.muted }]}>Last try: {entry.lastError}</Text>
             ) : null}
           </Card>
-        ))
+          );
+        })
       ) : (
         <EmptyState icon="cloudOk" message="Anything you record while offline appears here until it reaches the server." title="Nothing waiting" />
       )}

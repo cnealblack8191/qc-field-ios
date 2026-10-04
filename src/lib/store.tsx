@@ -7,7 +7,7 @@ import { AppState } from "react-native";
 import { ApiError, type FieldApi } from "./api/contract";
 import { demoServer } from "./api/demo";
 import { HttpFieldApi } from "./api/http";
-import { forgetPhoto, haptic, newId, secureSession } from "./device";
+import { forgetPhoto, haptic, newId, photoExists, resolvePhotoUri, secureSession } from "./device";
 import { applyOp, applyOps, supersedes, type FieldOp } from "./ops";
 import { validateOp } from "./rules";
 import type { FieldSnapshot, FieldUser } from "./types";
@@ -44,6 +44,31 @@ export interface QueuedOp {
   lastError: string | null;
   /** Set when the server refused the op; it will not be retried. */
   rejected: string | null;
+  /**
+   * Set when the op kept failing (the server kept erroring, or a photo it
+   * needs is gone). It waits for the inspector's Send again or Remove, and
+   * later changes to the same checklist or item wait with it, so order is
+   * kept; everything else carries on syncing.
+   */
+  stuck?: string | null;
+}
+
+/** Server errors in a row before an op is set aside as stuck. */
+const STUCK_AFTER = 6;
+
+/** What an op changes, for keeping changes to one thing in order. */
+function subjectOf(op: FieldOp) {
+  if ("reportId" in op) return `report:${op.reportId}`;
+  if ("itemId" in op) return `item:${op.itemId}`;
+  if (op.kind === "pin.inspect") return `pin:${op.pinId}`;
+  if (op.kind === "phase.completeWalk") return `phase:${op.phaseId}`;
+  return `op:${op.id}`;
+}
+
+/** The next op that may be sent now, if any. */
+function nextSendable(outbox: QueuedOp[]) {
+  const held = new Set(outbox.filter((entry) => entry.stuck).map((entry) => subjectOf(entry.op)));
+  return outbox.find((entry) => !entry.rejected && !entry.stuck && !held.has(subjectOf(entry.op)));
 }
 
 type SyncState = "idle" | "syncing" | "offline" | "error" | "auth";
@@ -65,6 +90,8 @@ interface FieldStore {
   enqueue(op: DistributiveOmit<FieldOp, "id" | "createdAt"> & { id?: string }): string | null;
   syncNow(): Promise<void>;
   dismiss(opId: string): void;
+  /** Puts a stuck op back in the queue and tries it now. */
+  retry(opId: string): void;
   setSimulateOffline(value: boolean): void;
   resetDemo(): Promise<void>;
   /** A photo or sheet URI as an image source: server files carry the token. */
@@ -92,7 +119,7 @@ function sourceFor(session: Session | null, uri: string): ImageSource {
       cacheKey: uri.split("?")[0]
     };
   }
-  return { uri };
+  return { uri: resolvePhotoUri(uri) };
 }
 
 function isExpired(session: Session | null) {
@@ -225,8 +252,19 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
     let drained = false;
     try {
       for (;;) {
-        const next = outboxRef.current.find((entry) => !entry.rejected);
+        const next = nextSendable(outboxRef.current);
         if (!next) break;
+        // A queued photo that is no longer on the phone can never send; say
+        // so now rather than retrying it forever.
+        if (current.mode === "live" && !photosOf(next.op).every(photoExists)) {
+          persistOutbox(
+            outboxRef.current.map((entry) =>
+              entry.op.id === next.op.id ? { ...entry, stuck: "A photo for this is no longer on this phone." } : entry
+            )
+          );
+          haptic.warning();
+          continue;
+        }
         try {
           await api.sendOp(current.token, next.op);
           // Fold the acknowledged op into the cached snapshot, so it does not
@@ -246,11 +284,21 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
             haptic.warning();
             continue;
           }
+          // The server keeps erroring on this one: set it aside so it does not
+          // hold up everything queued behind it. A missing signal never
+          // counts toward this; only answers from the server do.
+          const stuck = failure.disposition === "retry" && failure.serverAnswered && next.attempts + 1 >= STUCK_AFTER;
           persistOutbox(
             outboxRef.current.map((entry) =>
-              entry.op.id === next.op.id ? { ...entry, attempts: entry.attempts + 1, lastError: failure.message } : entry
+              entry.op.id === next.op.id
+                ? { ...entry, attempts: entry.attempts + 1, lastError: failure.message, stuck: stuck ? failure.message : entry.stuck ?? null }
+                : entry
             )
           );
+          if (stuck) {
+            haptic.warning();
+            continue;
+          }
           throw failure;
         }
       }
@@ -274,7 +322,7 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
       syncing.current = false;
       // Anything queued while the last fetch was in flight goes now, rather
       // than waiting for the next tap or reconnect.
-      if (drained && outboxRef.current.some((entry) => !entry.rejected)) setTimeout(() => void drainRef.current(), 0);
+      if (drained && nextSendable(outboxRef.current)) setTimeout(() => void drainRef.current(), 0);
     }
   }, [persistOutbox, persistSnapshot, refresh]);
 
@@ -388,7 +436,18 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback(
     (opId: string) => {
+      const removed = outboxRef.current.find((entry) => entry.op.id === opId);
       persistOutbox(outboxRef.current.filter((entry) => entry.op.id !== opId));
+      // Its queued photos go with it; nothing else will ever send them.
+      if (removed && sessionRef.current?.mode === "live") photosOf(removed.op).forEach((uri) => void forgetPhoto(uri));
+    },
+    [persistOutbox]
+  );
+
+  const retry = useCallback(
+    (opId: string) => {
+      persistOutbox(outboxRef.current.map((entry) => (entry.op.id === opId ? { ...entry, stuck: null, attempts: 0 } : entry)));
+      void drainRef.current();
     },
     [persistOutbox]
   );
@@ -427,11 +486,12 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
       enqueue,
       syncNow: drain,
       dismiss,
+      retry,
       setSimulateOffline,
       resetDemo,
       imageSource
     }),
-    [ready, session, view, outbox, pendingCount, rejectedCount, online, syncState, lastSyncedAt, simulateOffline, signIn, signOut, enqueue, drain, dismiss, setSimulateOffline, resetDemo, imageSource]
+    [ready, session, view, outbox, pendingCount, rejectedCount, online, syncState, lastSyncedAt, simulateOffline, signIn, signOut, enqueue, drain, dismiss, retry, setSimulateOffline, resetDemo, imageSource]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

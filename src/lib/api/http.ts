@@ -1,3 +1,4 @@
+import { photoMimeType, resolvePhotoUri } from "@/lib/device";
 import type { FieldOp } from "../ops";
 import type { FieldSnapshot, FieldUser } from "../types";
 import { ApiError, type FieldApi } from "./contract";
@@ -46,7 +47,7 @@ export class HttpFieldApi implements FieldApi {
       throw new ApiError("This server does not offer the mobile API yet. Use the demo, or the web field app.", "rejected");
     }
     // 408, 429 and 5xx are worth retrying; any other refusal is final.
-    if (response.status === 408 || response.status === 429 || response.status >= 500) throw new ApiError(message, "retry");
+    if (response.status === 408 || response.status === 429 || response.status >= 500) throw new ApiError(message, "retry", true);
     throw new ApiError(message, "rejected");
   }
 
@@ -72,9 +73,14 @@ export class HttpFieldApi implements FieldApi {
     const photoUris = "photoUris" in op ? op.photoUris : op.kind === "report.photo" ? [op.photoUri] : [];
     const form = new FormData();
     form.append("op", JSON.stringify(op));
-    photoUris.forEach((uri, index) => {
-      // React Native's FormData takes a file descriptor object in place of a Blob.
-      form.append("photo", { uri, name: `photo-${index}.jpg`, type: "image/jpeg" } as unknown as Blob);
+    photoUris.forEach((stored, index) => {
+      const uri = resolvePhotoUri(stored);
+      const type = photoMimeType(uri);
+      const extension = type === "image/jpeg" ? "jpg" : type.split("/")[1];
+      // React Native's FormData takes a file descriptor object in place of a
+      // Blob. The declared type matches the file, so the server converts what
+      // needs converting instead of trusting a wrong label.
+      form.append("photo", { uri, name: `photo-${index}.${extension}`, type } as unknown as Blob);
     });
     await this.request("/ops", {
       method: "POST",

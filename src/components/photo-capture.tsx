@@ -64,7 +64,11 @@ export function PhotoCapture({ photos, onChange, max = MAX_PHOTOS }: { photos: P
         allowsMultipleSelection: true,
         selectionLimit: remaining,
         quality: 0.7,
-        exif: false
+        exif: false,
+        // iOS hands library photos over in their stored format, which is HEIC
+        // on an iPhone; Compatible has it convert to JPEG, which every
+        // browser and the report PDF can show.
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible
       });
       if (!result.canceled) await add(result.assets);
     } finally {
