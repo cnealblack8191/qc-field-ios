@@ -23,7 +23,7 @@ export default function ProjectsScreen() {
           const summary = projectSummary(view, project.id);
           return (
             <Card
-              accessibilityHint="Opens the project's walks and inspections"
+              accessibilityHint="Opens the project's gear inspections and punch items"
               accessibilityLabel={`${project.name}, ${summary.openItems} open punch items, ${summary.inspectionsToDo} inspections to do`}
               key={project.id}
               onPress={() => router.push({ pathname: "/projects/[projectId]", params: { projectId: project.id } })}

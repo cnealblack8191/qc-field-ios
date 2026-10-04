@@ -57,7 +57,7 @@ export default function SignInScreen() {
               <Image accessibilityIgnoresInvertColors source={require("../../assets/icon.png")} style={styles.logo} />
               <Text accessibilityRole="header" style={[type.largeTitle, { color: "#fff" }]}>ECI Field QC</Text>
               <Text style={[type.callout, { color: "#9aa4af", textAlign: "center" }]}>
-                Punch walks, drawing pins and gear inspections — built to keep working with no signal.
+                Gear inspections and punch items — built to keep working with no signal.
               </Text>
             </View>
 

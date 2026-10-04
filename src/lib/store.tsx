@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Constants from "expo-constants";
-import { Image, type ImageSource } from "expo-image";
+import type { ImageSource } from "expo-image";
 import { AppState } from "react-native";
 import { ApiError, type FieldApi } from "./api/contract";
 import { demoServer } from "./api/demo";
@@ -164,18 +164,9 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const persistSnapshot = useCallback((next: FieldSnapshot) => {
-    const sheetUris = next.sheets.map((sheet) => sheet.imageUri).filter(Boolean);
-    const previous = new Set(snapshotRef.current?.sheets.map((sheet) => sheet.imageUri));
-    // Sheets must be on the device before the inspector walks into the
-    // basement, not when they first open one there.
-    const current = sessionRef.current;
-    if (current?.mode === "live" && sheetUris.some((uri) => !previous.has(uri))) {
-      const base = current.serverUrl.replace(/\/+$/, "");
-      void Image.prefetch(
-        sheetUris.map((uri) => `${base}${uri}`),
-        { cachePolicy: "disk", headers: { Authorization: `Bearer ${current.token}` } }
-      ).catch(() => undefined);
-    }
+    // Drawing sheets are no longer prefetched: the app does not show drawings
+    // (ECI decision 2026-10-04), and each one costs cellular data here and a
+    // render on the server.
     snapshotRef.current = next;
     setSnapshot(next);
     void AsyncStorage.setItem(snapshotKey(next.user.id), JSON.stringify(next)).catch(() => undefined);
@@ -379,7 +370,6 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(outboxKey(user.id)).catch(() => null)
       ]);
       sessionRef.current = next;
-      await secureSession.set(SESSION_KEY, JSON.stringify(next));
       const restoredOutbox = queued ? (JSON.parse(queued) as QueuedOp[]) : [];
       outboxRef.current = restoredOutbox;
       setOutbox(restoredOutbox);
@@ -388,7 +378,18 @@ export function FieldStoreProvider({ children }: { children: ReactNode }) {
         snapshotRef.current = parsed;
         setSnapshot(parsed);
       }
-      const fresh = await api.fetchSnapshot(token);
+      let fresh: FieldSnapshot;
+      try {
+        fresh = await api.fetchSnapshot(token);
+      } catch (error) {
+        // Signed in but nothing loaded: do not keep a half sign-in that the
+        // next launch would quietly restore. Revoke it and say what failed.
+        sessionRef.current = null;
+        void api.signOut(token).catch(() => undefined);
+        throw error;
+      }
+      // Stored only once the inspector's work has loaded.
+      await secureSession.set(SESSION_KEY, JSON.stringify(next));
       persistSnapshot(fresh);
       setLastSyncedAt(fresh.fetchedAt);
       setSession(next);

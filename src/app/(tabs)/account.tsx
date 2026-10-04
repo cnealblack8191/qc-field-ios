@@ -76,7 +76,7 @@ export default function AccountScreen() {
           <Row style={{ justifyContent: "space-between" }}>
             <View style={{ flex: 1 }}>
               <Text style={[type.body, { color: palette.ink }]}>Simulate no signal</Text>
-              <Meta>Record pins and items, watch them queue, then switch this off to sync.</Meta>
+              <Meta>Log items and answer checklists, watch them queue, then switch this off to sync.</Meta>
             </View>
             <Switch
               accessibilityLabel="Simulate no signal"
@@ -92,7 +92,7 @@ export default function AccountScreen() {
       {pendingCount ? <Notice icon="cloudUp" message={`${pendingCount} change${pendingCount === 1 ? "" : "s"} waiting to sync.`} tone="open" /> : null}
       <Button label="Sign out" onPress={confirmSignOut} variant="destructive" />
       <Meta>
-        ECI Field QC {Constants.expoConfig?.version ?? ""} · Placing and scanning pins is done in the office app.
+        ECI Field QC {Constants.expoConfig?.version ?? ""} · Drawing walks and reinspection are on the web field app.
       </Meta>
       {/* Off in Expo Go, the web preview and development builds. */}
       {Updates.isEnabled ? <AppUpdate /> : null}

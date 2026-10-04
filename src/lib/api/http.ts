@@ -9,6 +9,18 @@ import { ApiError, type FieldApi } from "./contract";
  * Served by the QC server under app/api/field/v1. A server that predates it
  * answers the sign-in with 404, which is reported plainly.
  */
+/**
+ * A 200 that is not JSON is usually a Wi-Fi sign-in page standing in for the
+ * server. Say so, instead of showing a raw parse error.
+ */
+async function readJson(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    throw new ApiError("The server sent an unexpected answer. If this Wi-Fi has a sign-in page, open it in Safari first, then try again.", "retry");
+  }
+}
+
 export class HttpFieldApi implements FieldApi {
   readonly mode = "live" as const;
 
@@ -57,7 +69,7 @@ export class HttpFieldApi implements FieldApi {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, device: this.device, shared })
     });
-    return (await response.json()) as { token: string; user: FieldUser; expiresAt: string | null };
+    return (await readJson(response)) as { token: string; user: FieldUser; expiresAt: string | null };
   }
 
   async signOut(token: string) {
@@ -66,7 +78,7 @@ export class HttpFieldApi implements FieldApi {
 
   async fetchSnapshot(token: string) {
     const response = await this.request("/snapshot", { method: "GET", token, timeoutMs: 45_000 });
-    return (await response.json()) as FieldSnapshot;
+    return (await readJson(response)) as FieldSnapshot;
   }
 
   async sendOp(token: string, op: FieldOp) {

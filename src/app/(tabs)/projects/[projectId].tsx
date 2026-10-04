@@ -17,6 +17,9 @@ export default function ProjectScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const palette = usePalette();
   const view = useView();
+  // Every hook before the early return below: a project unassigned while
+  // this screen is open must not change the number of hooks run.
+  const { pendingCount } = useField();
   const project = view.projects.find((candidate) => candidate.id === projectId);
 
   if (!project) {
@@ -27,7 +30,6 @@ export default function ProjectScreen() {
     );
   }
 
-  const { pendingCount } = useField();
   const openPhases = view.phases.filter((phase) => phase.projectId === project.id && phase.status !== "CLOSED");
   const projectPhaseIds = new Set(view.phases.filter((phase) => phase.projectId === project.id).map((phase) => phase.id));
   const mine = view.items.filter((item) => projectPhaseIds.has(item.phaseId) && item.createdById === view.user.id && item.status !== "VOID");

@@ -1,8 +1,8 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type ErrorBoundaryProps } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { Pressable, Text, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LockScreen } from "@/components/lock-screen";
@@ -11,6 +11,33 @@ import { FieldStoreProvider, useField } from "@/lib/store";
 import { usePalette } from "@/lib/theme";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+/**
+ * What shows if a screen throws, instead of a blank app. Work saved on the
+ * phone is untouched: the outbox lives in storage, not in the screen.
+ * Rendered outside the app's providers, so it uses plain colours.
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const dark = useColorScheme() === "dark";
+  const ink = dark ? "#f5f6f8" : "#15191d";
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 24, backgroundColor: dark ? "#15191d" : "#f5f6f8" }}>
+      <Text accessibilityRole="header" style={{ color: ink, fontSize: 22, fontWeight: "700", textAlign: "center" }}>
+        Something went wrong on this screen
+      </Text>
+      <Text style={{ color: ink, fontSize: 17, textAlign: "center", opacity: 0.75 }}>
+        Your saved work is still on this phone and will sync as usual.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => void retry()}
+        style={{ minHeight: 52, minWidth: 180, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#c2261c" }}
+      >
+        <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700" }}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function RootNavigator() {
   const { ready, session, view } = useField();
