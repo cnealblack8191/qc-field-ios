@@ -5,16 +5,14 @@ import { useField } from "@/lib/store";
 import { usePalette } from "@/lib/theme";
 
 /**
- * Four tabs, in the order an inspector reaches for them: the assigned
- * projects, every punch item still owed attention, what is waiting to sync,
- * and the account. Office functions have no tab because the field app does
- * not offer them.
+ * Three tabs: the assigned projects (where gear is inspected and punch items
+ * are logged), what is waiting to sync, and the account. Office functions have
+ * no tab because the field app does not offer them, and reinspection is done
+ * on the web field app (ECI decision 2026-10-04), so its tab is hidden.
  */
 export default function TabsLayout() {
   const palette = usePalette();
-  const { pendingCount, rejectedCount, view } = useField();
-  const userId = view?.user.id;
-  const openItems = view?.items.filter((item) => item.status === "OPEN" || item.status === "AWAITING_VERIFICATION").length ?? 0;
+  const { pendingCount, rejectedCount } = useField();
   const syncBadge = rejectedCount || pendingCount;
 
   return (
@@ -34,12 +32,8 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="punch"
-        options={{
-          title: "Punch",
-          tabBarBadge: openItems && userId ? openItems : undefined,
-          tabBarBadgeStyle: { backgroundColor: palette.warning, color: "#fff" },
-          tabBarIcon: ({ color }) => <Icon color={color} name="punch" size={24} />
-        }}
+        // Kept in the tree, off the tab bar: `href: null` hides it.
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="sync"

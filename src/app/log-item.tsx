@@ -14,12 +14,23 @@ import type { Photo } from "@/lib/types";
  * for a signal.
  */
 export default function LogItemScreen() {
-  const { phaseId } = useLocalSearchParams<{ phaseId: string }>();
+  const params = useLocalSearchParams<{ phaseId?: string; projectId?: string }>();
   const palette = usePalette();
   const view = useView();
   const { enqueue, online } = useField();
+  const projectId = params.projectId ?? view.phases.find((candidate) => candidate.id === params.phaseId)?.projectId;
+  const project = view.projects.find((candidate) => candidate.id === projectId);
+  // Every punch item belongs to one phase of the project. Only open phases
+  // take new items; with just one there is nothing to choose.
+  const openPhases = view.phases
+    .filter((candidate) => candidate.projectId === projectId && candidate.status !== "CLOSED")
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const [chosenPhaseId, setChosenPhaseId] = useState<string | null>(
+    params.phaseId ?? (openPhases.length === 1 ? openPhases[0]!.id : null)
+  );
+  const phaseId = chosenPhaseId ?? "";
   const phase = view.phases.find((candidate) => candidate.id === phaseId);
-  const equipment = view.equipment.filter((candidate) => candidate.projectId === phase?.projectId);
+  const equipment = view.equipment.filter((candidate) => candidate.projectId === projectId);
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [location, setLocation] = useState("");
@@ -28,11 +39,16 @@ export default function LogItemScreen() {
   const [responsibleParty, setResponsibleParty] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
 
-  // The last locations used on this walk, one tap away: an inspector logs
+  // The last locations used on this project, one tap away: an inspector logs
   // several items in the same room.
-  const recentLocations = [...new Set(view.items.filter((item) => item.phaseId === phaseId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => item.location))].slice(0, 3);
+  const projectPhaseIds = new Set(view.phases.filter((candidate) => candidate.projectId === projectId).map((candidate) => candidate.id));
+  const recentLocations = [...new Set(view.items.filter((item) => projectPhaseIds.has(item.phaseId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => item.location))].slice(0, 3);
 
   function save(another: boolean) {
+    if (!phase) {
+      haptic.warning();
+      return setProblem("Choose the phase this item belongs to.");
+    }
     const result = enqueue({
       kind: "punch.create",
       phaseId,
@@ -68,9 +84,36 @@ export default function LogItemScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
           <Text style={[type.subhead, { color: palette.muted }]}>
-            {phase?.name} · {online ? "Saves instantly and syncs." : "No signal — saves on this device and syncs later."}
+            {project?.name ?? ""}
+            {phase && openPhases.length === 1 ? ` · ${phase.name}` : ""} ·{" "}
+            {online ? "Saves instantly and syncs." : "No signal — saves on this device and syncs later."}
           </Text>
           {problem ? <Notice icon="warning" message={problem} tone="danger" /> : null}
+
+          {openPhases.length > 1 ? (
+            <View style={{ gap: 6 }}>
+              <Text style={[type.footnote, { color: palette.inkSoft }]}>Phase</Text>
+              <View style={styles.chips}>
+                {openPhases.map((candidate) => {
+                  const selected = candidate.id === phaseId;
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      key={candidate.id}
+                      onPress={() => {
+                        setChosenPhaseId(candidate.id);
+                        setProblem(null);
+                      }}
+                      style={[styles.chip, { backgroundColor: selected ? palette.ink : palette.surfaceMuted }]}
+                    >
+                      <Text style={[type.subhead, { color: selected ? palette.bg : palette.ink, fontWeight: "700" }]}>{candidate.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
 
           <PhotoCapture onChange={setPhotos} photos={photos} />
 
