@@ -112,6 +112,26 @@ Give the reviewer:
   > app offers two things: "Log a punch item" (photo, location, description)
   > and the gear inspection checklists assigned to the inspector.
 
+### Submitting before the server's mobile API is live
+
+Apple's reviewer can't sign in until the QC server release with the mobile API
+is deployed, because **Sign in** reports that the server doesn't offer it yet.
+The demo shows every feature, so point the reviewer there. Use these notes
+instead of the ones above:
+
+> ECI Field QC is an internal tool for ECI's electrical inspectors. Accounts
+> are created by ECI (no sign-up, so no account deletion in the app). Please
+> tap **Explore the demo** on the sign-in screen: it opens the full app with
+> sample projects stored only on the device. Per project the app offers
+> "Log a punch item" (photo, location, description) and the gear inspection
+> checklists. Account → "Simulate no signal" shows offline saving and syncing.
+> Inspector accounts for ECI's live server are being issued; we can provide
+> one on request.
+
+There is a risk that Apple asks for a working login anyway (guideline 2.1).
+If it does, reply with the reviewer account once the server is deployed. The
+build doesn't need to change.
+
 ## Before the first store build
 
 - [ ] Deploy the QC server release with the mobile API and the October 4 photo
