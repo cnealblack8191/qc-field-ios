@@ -6,7 +6,7 @@ import { Pressable, Text, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LockScreen } from "@/components/lock-screen";
-import { LockProvider } from "@/lib/lock";
+import { LockProvider, useLock } from "@/lib/lock";
 import { FieldStoreProvider, useField } from "@/lib/store";
 import { usePalette } from "@/lib/theme";
 
@@ -45,11 +45,14 @@ function RootNavigator() {
   const scheme = useColorScheme();
   const signedIn = Boolean(session && view);
 
-  // Hold the splash until the stored session and cached walk are read, so a
-  // signed-in inspector never sees the sign-in screen flash.
+  const { settled } = useLock();
+
+  // Hold the splash until the stored session and cached work are read, and
+  // until the Face ID setting is, so a signed-in inspector never sees the
+  // sign-in screen flash and a locked app never shows its content first.
   useEffect(() => {
-    if (ready) void SplashScreen.hideAsync().catch(() => undefined);
-  }, [ready]);
+    if (ready && settled) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [ready, settled]);
 
   if (!ready) return null;
 

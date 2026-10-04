@@ -6,6 +6,7 @@ import { PhotoCapture } from "@/components/photo-capture";
 import { Segmented } from "@/components/segmented";
 import { SyncBanner } from "@/components/sync-status";
 import { Button, Card, EmptyState, Field, Meta, Notice, PhotoStrip, Pill, ProgressBar, Row } from "@/components/ui";
+import { useDebouncedSave } from "@/lib/debounce";
 import { haptic } from "@/lib/device";
 import { equipmentType, gearPhase, reportStatus } from "@/lib/labels";
 import { isReportEditable, reportGaps } from "@/lib/rules";
@@ -30,6 +31,7 @@ export default function ReportScreen() {
   const [filter, setFilter] = useState<"all" | "open">("all");
   const [notes, setNotes] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const notesSave = useDebouncedSave();
 
   const report = view.reports.find((candidate) => candidate.id === reportId);
   if (!report) {
@@ -43,7 +45,7 @@ export default function ReportScreen() {
   const project = view.projects.find((candidate) => candidate.id === report.projectId);
   const progress = reportProgress(view, report.id);
   const editable = isReportEditable(report, view.user.id);
-  const status = reportStatus[report.status];
+  const status = reportStatus[report.status] ?? { label: String(report.status), tone: "neutral" as const };
   const openCount = progress.total - progress.answered;
   const flagged = report.answers.filter((item) => item.status === "no");
   const gaps = reportGaps(report);
@@ -97,11 +99,11 @@ export default function ReportScreen() {
         <Card>
           <Row style={{ justifyContent: "space-between" }}>
             <Text style={[type.caption, { color: palette.muted }]}>
-              {equipmentType[gear?.type ?? "PANEL_BOARD"].toUpperCase()} · {gearPhase[report.gearPhase].toUpperCase()}
+              {(equipmentType[gear?.type ?? "PANEL_BOARD"] ?? "Equipment").toUpperCase()} · {(gearPhase[report.gearPhase] ?? String(report.gearPhase)).toUpperCase()}
             </Text>
             <Pill label={status.label} tone={status.tone} />
           </Row>
-          <Text style={[type.title, { color: palette.ink }]}>{gear?.tag}</Text>
+          <Text style={[type.title, { color: palette.ink }]}>{gear?.tag ?? "Equipment"}</Text>
           <Meta>{project?.name} · {gear?.location}</Meta>
           <ProgressBar value={progress.percent} />
           <Meta>{progress.answered} of {progress.total} answered · {report.photos.length} photo{report.photos.length === 1 ? "" : "s"}</Meta>
@@ -129,11 +131,15 @@ export default function ReportScreen() {
           <Field
             editable={editable}
             label="Jobsite notes (optional)"
+            maxLength={10000}
             multiline
-            onBlur={() => {
-              if (notes !== null && notes !== report.notes) enqueue({ kind: "report.notes", reportId: report.id, notes });
+            onBlur={notesSave.flush}
+            onChangeText={(text) => {
+              setNotes(text);
+              notesSave.schedule(() => {
+                if (text !== report.notes) enqueue({ kind: "report.notes", reportId: report.id, notes: text });
+              });
             }}
-            onChangeText={setNotes}
             placeholder="Overall conditions, coordination notes, follow-up needs…"
             value={notes ?? report.notes}
           />
@@ -213,9 +219,10 @@ const AnswerRow = memo(function AnswerRow({ item, index, editable, onAnswer }: {
 }) {
   const palette = usePalette();
   const [comments, setComments] = useState(item.comments);
+  const commentSave = useDebouncedSave();
   const [showComment, setShowComment] = useState(Boolean(item.comments) || item.status === "no");
 
-  const tones: Record<Exclude<AnswerStatus, "">, string> = { yes: palette.ok, no: palette.accent, "n/a": "#8a939c" };
+  const tones: Record<Exclude<AnswerStatus, "">, string> = { yes: palette.ok, no: palette.accent, "n/a": "#5f6b76" };
 
   return (
     <View style={[styles.row, { backgroundColor: palette.surface, borderColor: item.status ? palette.line : palette.lineStrong }]}>
@@ -241,6 +248,9 @@ const AnswerRow = memo(function AnswerRow({ item, index, editable, onAnswer }: {
               key={option.value}
               onPress={() => {
                 haptic.tap();
+                // A comment still waiting to save goes first, so it is never
+                // replayed over this newer answer.
+                commentSave.flush();
                 const next = selected ? "" : option.value;
                 if (next === "no") setShowComment(true);
                 onAnswer(item, next, comments);
@@ -261,11 +271,15 @@ const AnswerRow = memo(function AnswerRow({ item, index, editable, onAnswer }: {
         <Field
           editable={editable}
           label={item.status === "no" ? "What is wrong" : "Comment"}
+          maxLength={4000}
           multiline
-          onBlur={() => {
-            if (comments !== item.comments) onAnswer(item, item.status, comments);
+          onBlur={commentSave.flush}
+          onChangeText={(text) => {
+            setComments(text);
+            commentSave.schedule(() => {
+              if (text !== item.comments) onAnswer(item, item.status, text);
+            });
           }}
-          onChangeText={setComments}
           value={comments}
         />
       ) : null}

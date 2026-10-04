@@ -1,9 +1,9 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PhotoCapture } from "@/components/photo-capture";
 import { Button, Field, Notice } from "@/components/ui";
-import { haptic } from "@/lib/device";
+import { forgetPhoto, haptic } from "@/lib/device";
 import { useField, useView } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
 import type { Photo } from "@/lib/types";
@@ -49,11 +49,35 @@ export default function LogItemScreen() {
   const projectPhaseIds = new Set(view.phases.filter((candidate) => candidate.projectId === projectId).map((candidate) => candidate.id));
   const recentLocations = [...new Set(view.items.filter((item) => projectPhaseIds.has(item.phaseId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => item.location))].slice(0, 3);
 
-  function save(another: boolean) {
-    if (!phase) {
-      haptic.warning();
-      return setProblem("Choose the phase this item belongs to.");
+  const scrollRef = useRef<ScrollView>(null);
+  const dirty = Boolean(photos.length || location.trim() || description.trim() || responsibleParty.trim());
+
+  /** A problem is said where it can be seen: the form scrolls up to it. */
+  function report(message: string) {
+    haptic.warning();
+    setProblem(message);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
+  function leave() {
+    const discard = () => {
+      // Copies taken for this form only; nothing queued refers to them.
+      photos.forEach((photo) => void forgetPhoto(photo.uri));
+      router.back();
+    };
+    if (!dirty) return router.back();
+    if (Platform.OS === "web") {
+      if (globalThis.confirm?.("Discard this punch item?") ?? true) discard();
+      return;
     }
+    Alert.alert("Discard this punch item?", "The photos and text you entered will be lost.", [
+      { text: "Keep editing", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: discard }
+    ]);
+  }
+
+  function save(another: boolean) {
+    if (!phase) return report("Choose the phase this item belongs to.");
     const result = enqueue({
       kind: "punch.create",
       phaseId,
@@ -63,10 +87,7 @@ export default function LogItemScreen() {
       responsibleParty: responsibleParty.trim() || null,
       photoUris: photos.map((photo) => photo.uri)
     });
-    if (result) {
-      haptic.warning();
-      return setProblem(result);
-    }
+    if (result) return report(result);
     haptic.success();
     if (another) {
       setPhotos([]);
@@ -83,10 +104,13 @@ export default function LogItemScreen() {
       <Stack.Screen
         options={{
           title: "Log punch item",
-          headerLeft: () => <Button label="Cancel" onPress={() => router.back()} variant="plain" />
+          headerLeft: () => <Button label="Cancel" onPress={leave} variant="plain" />,
+          // While there is something to lose, a swipe down cannot close the
+          // form; Cancel asks first.
+          gestureEnabled: !dirty
         }}
       />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" ref={scrollRef}>
         <View style={styles.column}>
           <Text style={[type.subhead, { color: palette.muted }]}>
             {project?.name ?? ""}

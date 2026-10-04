@@ -29,6 +29,12 @@ interface LockState {
   kind: Kind;
   enabled: boolean;
   locked: boolean;
+  /**
+   * False until this phone's Face ID capability and the inspector's choice
+   * have been read. The splash stays up until then, so a locked app never
+   * shows its content first.
+   */
+  settled: boolean;
   setEnabled(value: boolean): Promise<void>;
   unlock(): Promise<boolean>;
 }
@@ -62,6 +68,8 @@ export function LockProvider({ children }: { children: ReactNode }) {
   const [kind, setKind] = useState<Kind>("Face ID");
   const [enabled, setEnabledState] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [capabilityRead, setCapabilityRead] = useState(false);
+  const [prefReadFor, setPrefReadFor] = useState<string | null>(null);
   const backgroundedAt = useRef<number | null>(null);
   const offeredFor = useRef<string | null>(null);
 
@@ -69,6 +77,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
     void readCapability().then((capability) => {
       setAvailable(capability.available);
       setKind(capability.kind);
+      setCapabilityRead(true);
     });
   }, []);
 
@@ -80,6 +89,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
       setLocked(false);
       return;
     }
+    if (!capabilityRead) return;
     let cancelled = false;
     void (async () => {
       const stored = await AsyncStorage.getItem(prefKey(userId)).catch(() => null);
@@ -87,6 +97,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
       const on = stored === "on";
       setEnabledState(on);
       if (on && available) setLocked(true);
+      setPrefReadFor(userId);
       if (stored === null && available && offeredFor.current !== userId) {
         offeredFor.current = userId;
         Alert.alert(`Use ${kind} to unlock?`, `Open ECI Field QC with ${kind} instead of your password. Your password is still needed every 45 days.`, [
@@ -107,7 +118,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, shared, available, kind]);
+  }, [userId, shared, available, kind, capabilityRead]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
@@ -145,7 +156,17 @@ export function LockProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Context.Provider value={{ available: available && !shared, kind, enabled, locked: locked && enabled && available && !shared, setEnabled, unlock }}>
+    <Context.Provider
+      value={{
+        available: available && !shared,
+        kind,
+        enabled,
+        locked: locked && enabled && available && !shared,
+        settled: capabilityRead && (!userId || shared || prefReadFor === userId),
+        setEnabled,
+        unlock
+      }}
+    >
       {children}
     </Context.Provider>
   );

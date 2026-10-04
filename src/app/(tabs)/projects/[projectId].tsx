@@ -61,22 +61,22 @@ export default function ProjectScreen() {
         reports.map((report) => {
           const gear = view.equipment.find((candidate) => candidate.id === report.equipmentId);
           const progress = reportProgress(view, report.id);
-          const status = reportStatus[report.status];
+          const status = reportStatus[report.status] ?? { label: String(report.status), tone: "neutral" as const };
           return (
             <Card
-              accessibilityLabel={`${gear?.tag}, ${equipmentType[gear?.type ?? "PANEL_BOARD"]}, ${status.label}, ${progress.answered} of ${progress.total} answered`}
+              accessibilityLabel={`${gear?.tag ?? "Equipment"}, ${equipmentType[gear?.type ?? "PANEL_BOARD"] ?? "Equipment"}, ${status.label}, ${progress.answered} of ${progress.total} answered`}
               key={report.id}
               onPress={() => router.push({ pathname: "/projects/report/[reportId]", params: { reportId: report.id } })}
             >
               <Row style={{ justifyContent: "space-between" }}>
                 <Text style={[type.caption, { color: palette.muted }]}>
-                  {equipmentType[gear?.type ?? "PANEL_BOARD"].toUpperCase()} · {gearPhase[report.gearPhase].toUpperCase()}
+                  {(equipmentType[gear?.type ?? "PANEL_BOARD"] ?? "Equipment").toUpperCase()} · {(gearPhase[report.gearPhase] ?? String(report.gearPhase)).toUpperCase()}
                 </Text>
                 <Pill label={status.label} tone={status.tone} />
               </Row>
               <Row>
                 <Icon color={palette.accent} name="gear" size={18} />
-                <Text style={[type.headline, { color: palette.ink, fontSize: 19 }]}>{gear?.tag}</Text>
+                <Text style={[type.headline, { color: palette.ink, fontSize: 19 }]}>{gear?.tag ?? "Equipment"}</Text>
               </Row>
               <Meta>{gear?.location}</Meta>
               <ProgressBar value={progress.percent} />
