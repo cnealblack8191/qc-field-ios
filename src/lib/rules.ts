@@ -10,14 +10,17 @@ import type { FieldSnapshot, InspectionReport, PunchItem, PunchPhase } from "./t
  * server rejects exactly what the real one would.
  */
 
+/** Shown when an item made on this phone has not come back from the server yet. */
+export const PROVISIONAL_ITEM = "This item is still syncing. You can change it once it has sent.";
+
 export function canEditItem(item: PunchItem, phase: PunchPhase | undefined, userId: string) {
   // The inspector who logged an item can fix or remove it while it is still
   // OPEN; once sent or evidenced, only the office changes it.
-  return item.status === "OPEN" && item.createdById === userId && phase?.status !== "CLOSED";
+  return !item.provisional && item.status === "OPEN" && item.createdById === userId && phase?.status !== "CLOSED";
 }
 
 export function canVerifyItem(item: PunchItem, phase: PunchPhase | undefined) {
-  return (item.status === "OPEN" || item.status === "SENT" || item.status === "AWAITING_VERIFICATION") && phase?.status !== "CLOSED";
+  return !item.provisional && (item.status === "OPEN" || item.status === "SENT" || item.status === "AWAITING_VERIFICATION") && phase?.status !== "CLOSED";
 }
 
 export function isReportEditable(report: InspectionReport, userId: string) {
@@ -56,6 +59,7 @@ export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string)
     case "punch.void": {
       const item = itemOf(op.itemId);
       if (!item) return "That item is no longer on this walk.";
+      if (item.provisional) return PROVISIONAL_ITEM;
       if (!canEditItem(item, phaseOf(item.phaseId), userId)) return "The office has this item now; ask them to change it.";
       if (op.kind === "punch.void" && !op.reason.trim()) return "Say why the item is being removed.";
       return null;
@@ -63,6 +67,7 @@ export function validateOp(snapshot: FieldSnapshot, op: FieldOp, userId: string)
     case "punch.verify": {
       const item = itemOf(op.itemId);
       if (!item) return "That item is no longer on this walk.";
+      if (item.provisional) return PROVISIONAL_ITEM;
       if (item.status === "VERIFIED") return "That item is already verified.";
       if (!canVerifyItem(item, phaseOf(item.phaseId))) return "That item is already closed.";
       return null;
