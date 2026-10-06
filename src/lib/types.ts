@@ -54,6 +54,12 @@ export interface PunchItem {
   /** Set when the item was raised from a drawing pin. */
   annotationId?: string | null;
   isLocal?: boolean;
+  /**
+   * The id was made on this phone. The server stores the item under its own
+   * id, so a change sent with this one would be refused; changes wait until a
+   * snapshot from the server replaces the item.
+   */
+  provisional?: boolean;
 }
 
 export interface PunchPhase {

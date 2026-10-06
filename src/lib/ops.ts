@@ -179,7 +179,8 @@ export function applyOp(input: FieldSnapshot, op: FieldOp, options: { local: boo
         createdById: options.userId,
         createdAt: op.createdAt,
         photos: op.photoUris.map((uri, index) => ({ id: `${op.id}-p${index}`, uri, isLocal: options.local })),
-        isLocal: options.local
+        isLocal: options.local,
+        provisional: true
       };
       snapshot.items = [...snapshot.items, item];
       touchPhase(snapshot, op.phaseId);
@@ -243,7 +244,8 @@ export function applyOp(input: FieldSnapshot, op: FieldOp, options: { local: boo
               createdAt: op.createdAt,
               photos: op.photoUris.map((uri, index) => ({ id: `${op.id}-p${index}`, uri, isLocal: options.local })),
               annotationId: pin.id,
-              isLocal: options.local
+              isLocal: options.local,
+              provisional: true
             }
           ];
         }

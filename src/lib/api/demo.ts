@@ -77,7 +77,10 @@ class DemoServer implements FieldApi {
     if (this.seen.has(op.id)) return;
     const problem = validateOp(state, op, DEMO_USER.id);
     if (problem) throw new ApiError(problem, "rejected");
-    this.state = applyOp(state, op, { local: false, userId: DEMO_USER.id });
+    const next = applyOp(state, op, { local: false, userId: DEMO_USER.id });
+    // This is the server, so the ids it keeps are the real ones: unlike the
+    // QC server, the demo keeps the phone's id rather than issuing its own.
+    this.state = { ...next, items: next.items.map(({ provisional: _provisional, ...item }) => item) };
     this.seen.add(op.id);
     await this.save();
   }

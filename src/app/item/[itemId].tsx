@@ -5,7 +5,7 @@ import { Alert, Platform, ScrollView, StyleSheet, Text, View } from "react-nativ
 import { Button, Card, EmptyState, Field, Meta, Notice, Pill, Row } from "@/components/ui";
 import { haptic } from "@/lib/device";
 import { punchStatus } from "@/lib/labels";
-import { canEditItem, canVerifyItem } from "@/lib/rules";
+import { canEditItem, canVerifyItem, PROVISIONAL_ITEM } from "@/lib/rules";
 import { useField, useView } from "@/lib/store";
 import { size, type, usePalette } from "@/lib/theme";
 
@@ -160,7 +160,7 @@ export default function PunchItemScreen() {
             <Button icon="trash" label="Remove item" onPress={() => setRemoving(true)} variant="destructive" />
           )
         ) : item.status !== "VERIFIED" && item.status !== "VOID" ? (
-          <Meta>{item.status === "OPEN" ? "Another inspector logged this item; the office or they can change it." : "The office has this item now; ask them to change it."}</Meta>
+          <Meta>{item.provisional ? PROVISIONAL_ITEM : item.status === "OPEN" ? "Another inspector logged this item; the office or they can change it." : "The office has this item now; ask them to change it."}</Meta>
         ) : null}
       </View>
     </ScrollView>
