@@ -1,5 +1,14 @@
 # ECI Field QC — iOS app
 
+## Resuming and handing off work
+
+Before starting or resuming a coding task or making a significant project decision, read the relevant entries in the root [progress.md](progress.md). Compare them with the current branch, working tree, and any linked issue or pull request. Confirm ownership and check evidence of completion before repeating work.
+
+When authorized to update the handoff, record the task and branch at the start. At a decision, milestone, blocker, or stopping point, record what changed, the reason for a decision and its approval status, what was verified, and one concrete next action. On completion, record the check and its result. Re-read before editing and preserve other sessions' entries. Follow this project's existing approval, coordination, and recordkeeping rules.
+
+Identify whether the latest work is local or available in a shared branch, commit, or PR. Include only information appropriate for this repository's readers. Publishing an update follows the normal review and approval process.
+
+
 The native field app for inspectors. The server, its rules and the API this
 app talks to live in the QC repo (`cnealblack8191/qc`); its `AGENTS.md` still
 applies here: pins are placed by the office, inspectors reach only assigned
